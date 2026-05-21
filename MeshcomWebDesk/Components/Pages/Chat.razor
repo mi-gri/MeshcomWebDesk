@@ -176,7 +176,7 @@
                     }
                 </div>
 
-                <SendBar @ref="_sendBar" OnSend="HandleSendMessage" Callsign="@_activeTab.Key" />
+                <SendBar @key="@("sendbar")" @ref="_sendBar" OnSend="HandleSendMessage" Callsign="@_activeTab.Key" />
             }
             else
             {

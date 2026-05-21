@@ -105,7 +105,8 @@
 
     public void Dispose()
     {
-        _cooldownCts?.Cancel();
+        // Do NOT cancel _cooldownCts here – the timer must finish its countdown
+        // even if the component is disposed (e.g. on navigation away).
         Loc.OnChange -= OnLocChange;
         _settingsListener?.Dispose();
         _dotNetRef?.Dispose();
