@@ -272,12 +272,13 @@ public class ChatService
             && message.To.Any(char.IsLetter);   // groups are purely numeric → no letters
 
         // Only flag as "direct to this node" when the destination callsign matches
-        // the node's configured callsign OR the primary legacy callsign.
-        // This prevents foreign direct messages relayed via LoRa from triggering AutoReply.
+        // the node's configured callsign.
+        // Do NOT fall back to _settings.MyCallsign here – in multi-node setups that would
+        // cause messages addressed to the primary node's callsign to open a direct tab on
+        // every other node as well (e.g. a message to DH1FR-2 appearing on DH1FR-99).
         bool isDirectToNode = nodeId is not null
             && looksLikeCallsign
-            && (string.Equals(message.To, myCallsign, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(message.To, _settings.MyCallsign, StringComparison.OrdinalIgnoreCase));
+            && string.Equals(message.To, myCallsign, StringComparison.OrdinalIgnoreCase);
 
         if (message.IsBroadcast)
         {
