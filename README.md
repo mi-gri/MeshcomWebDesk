@@ -1352,13 +1352,15 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 
  ## 📋 Changelog
 
-### v1.10.3
-- **fix:** 🐛 **Chat-Absturz beim Tab-Klick** – `ArgumentNullException` beim Öffnen der Chat-Seite behoben; Ursache war ein Tab mit `Key = null` der durch ein eingehendes UDP-Paket ohne `From`-Feld angelegt wurde und ab v1.10.2 durch die server-seitige Tab-Persistenz dauerhaft gespeichert blieb
-- **fix:** 🐛 **Null-Key Tab verhindert** – `message.From` und `message.To` werden in `AddIncomingMessage` jetzt auf null/leer geprüft; fehlerhafte Pakete landen harmlos im `*` (Alle)-Tab statt einen ungültigen Tab zu erzeugen
-- **fix:** 🐛 **Snapshot-Restore überspringt ungültige Tabs** – beim Wiederherstellen gespeicherter Tab-Zustände werden Tabs mit leerem oder null Key übersprungen; verhindert dass ein einmalig gespeicherter Fehler-Tab bei jedem App-Start den Crash erneut auslöst
-- **fix:** 🐛 **`ArgumentNullException` in `_lastNotificationTime`** – `Dictionary<Guid?, DateTime>` erlaubt keinen `null`-Key; wenn `_activeNodeId` beim ersten Laden noch `null` ist (kein Node verbunden) führte der Lookup zum Absturz; Dictionary auf `Dictionary<Guid, DateTime>` umgestellt, `null` wird durch `Guid.Empty` ersetzt
+### v1.10.4 *(in development)*
 
-### v1.10.2 *(in development)*
+### v1.10.3
+- **fix:** 🐛 **Chat crash on tab click** – `ArgumentNullException` when opening the Chat page fixed; caused by a tab with `Key = null` created from an incoming UDP packet without a `From` field; from v1.10.2 onwards this tab was permanently persisted via server-side tab persistence
+- **fix:** 🐛 **Null-Key tab prevented** – `message.From` and `message.To` are now validated in `AddIncomingMessage`; malformed packets are routed harmlessly to the `*` (All) tab instead of creating an invalid tab
+- **fix:** 🐛 **Snapshot restore skips invalid tabs** – tabs with an empty or null key are skipped when restoring saved tab state; prevents a once-persisted broken tab from triggering the crash on every app start
+- **fix:** 🐛 **`ArgumentNullException` in `_lastNotificationTime`** – `Dictionary<Guid?, DateTime>` does not accept a `null` key; when `_activeNodeId` is still `null` on first load (no node connected) the lookup crashed; dictionary changed to `Dictionary<Guid, DateTime>`, `null` is replaced by `Guid.Empty`
+
+### v1.10.2 *(released)*
 - **feat:** 🔔 **Ping confirmation dialog** – a browser confirmation is shown when sending `ping` or `--ping` to a group or broadcast tab, preventing accidental transmissions
 - **feat:** ✓✓ **Combined ACK display** – the ACK indicator now shows LoRa and Gateway delivery combined (`✓✓ ☁️✓`); users can see whether their message arrived via LoRa, the gateway, or both
 - **feat:** 🖥️ **NET Console** (renamed from HMAC Console) – new HMAC-TCP console mode; renamed consistently throughout the UI and settings
