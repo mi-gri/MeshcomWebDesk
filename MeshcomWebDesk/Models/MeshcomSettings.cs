@@ -211,6 +211,9 @@ public class MeshcomSettings
     /// <summary>Optional MQTT integration: publish events to a broker and/or receive send-commands.</summary>
     public MqttSettings Mqtt { get; set; } = new();
 
+    /// <summary>Optional external weather data provider (AWEKAS, Weather Underground).</summary>
+    public WeatherApiSettings WeatherApi { get; set; } = new();
+
     /// <summary>
     /// User-defined group labels. Key = group number (e.g. "262"), Value = display name.
     /// Used to show a human-readable name below the group tab title in the chat UI.

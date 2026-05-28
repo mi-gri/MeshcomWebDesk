@@ -1,0 +1,126 @@
+using System.Text.Json;
+
+namespace MeshcomWebDesk.Services.Weather;
+
+/// <summary>
+/// Fetches current weather data from Weather Underground (IBM/The Weather Company).
+/// API endpoint: https://api.weather.com/v2/pws/observations/current
+/// Authentication: API Key + Station ID
+/// Units: metric (m) – all values in SI units (°C, hPa, km/h, mm)
+/// </summary>
+public class WUndergroundProvider : IWeatherProvider
+{
+    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly ILogger<WUndergroundProvider> _logger;
+
+    private const string BaseUrl = "https://api.weather.com/v2/pws/observations/current";
+
+    public string Name => "Weather Underground";
+
+    public WUndergroundProvider(IHttpClientFactory httpClientFactory, ILogger<WUndergroundProvider> logger)
+    {
+        _httpClientFactory = httpClientFactory;
+        _logger = logger;
+    }
+
+    public async Task<WeatherData?> FetchAsync(string apiKey, string stationId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(apiKey) || string.IsNullOrWhiteSpace(stationId))
+        {
+            _logger.LogWarning("WUnderground: apiKey or stationId is empty");
+            return null;
+        }
+
+        try
+        {
+            var client = _httpClientFactory.CreateClient("WeatherApi");
+            var url = $"{BaseUrl}?stationId={Uri.EscapeDataString(stationId)}" +
+                      $"&format=json&units=m&apiKey={Uri.EscapeDataString(apiKey)}" +
+                      $"&numericPrecision=decimal";
+
+            _logger.LogDebug("WUnderground fetch: {Url}", url.Replace(apiKey, "***"));
+
+            using var response = await client.GetAsync(url, ct);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var err = await response.Content.ReadAsStringAsync(ct);
+                _logger.LogWarning("WUnderground returned HTTP {StatusCode}: {Error}", response.StatusCode, err);
+                return null;
+            }
+
+            var json = await response.Content.ReadAsStringAsync(ct);
+            return ParseResponse(json);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "WUnderground fetch failed");
+            return null;
+        }
+    }
+
+    private WeatherData? ParseResponse(string json)
+    {
+        try
+        {
+            // WUnderground response:
+            // { "observations": [ { "stationID":"...", "obsTimeUtc":"...",
+            //     "metric": { "temp":..., "heatIndex":..., "dewpt":...,
+            //                 "windSpeed":..., "windGust":..., "pressure":...,
+            //                 "precipRate":..., "precipTotal":..., "elev":... },
+            //     "humidity":..., "winddir":..., "uv":..., "solarRadiation":... } ] }
+
+            using var doc = JsonDocument.Parse(json);
+            var obs = doc.RootElement
+                         .GetProperty("observations")[0];
+
+            var data = new WeatherData { ProviderName = Name };
+
+            // Top-level fields
+            TryAddDouble(obs, "humidity",        data.Fields, WeatherFields.HumidityOutdoor);
+            TryAddDouble(obs, "winddir",          data.Fields, WeatherFields.WindDirection);
+            TryAddDouble(obs, "uv",               data.Fields, WeatherFields.UvIndex);
+            TryAddDouble(obs, "solarRadiation",   data.Fields, WeatherFields.SolarRadiation);
+
+            // Metric sub-object
+            if (obs.TryGetProperty("metric", out var m))
+            {
+                TryAddDouble(m, "temp",         data.Fields, WeatherFields.TempOutdoor);
+                TryAddDouble(m, "dewpt",        data.Fields, WeatherFields.DewPoint);
+                TryAddDouble(m, "windSpeed",    data.Fields, WeatherFields.WindSpeed);
+                TryAddDouble(m, "windGust",     data.Fields, WeatherFields.WindGust);
+                TryAddDouble(m, "pressure",     data.Fields, WeatherFields.PressureRelative);
+                TryAddDouble(m, "precipRate",   data.Fields, WeatherFields.RainRate);
+                TryAddDouble(m, "precipTotal",  data.Fields, WeatherFields.RainDaily);
+            }
+
+            // Observation timestamp
+            if (obs.TryGetProperty("obsTimeUtc", out var ts) &&
+                DateTime.TryParse(ts.GetString(), out var dt))
+                data.ObservedUtc = dt.ToUniversalTime();
+
+            return data.Fields.Count > 0 ? data : null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "WUnderground: failed to parse response: {Json}", json);
+            return null;
+        }
+    }
+
+    private static void TryAddDouble(JsonElement el, string jsonProp, Dictionary<string, double> target, string key)
+    {
+        if (!el.TryGetProperty(jsonProp, out var prop)) return;
+        double val;
+        if (prop.ValueKind == JsonValueKind.Number)
+            val = prop.GetDouble();
+        else if (prop.ValueKind == JsonValueKind.String &&
+                 double.TryParse(prop.GetString(),
+                     System.Globalization.NumberStyles.Float,
+                     System.Globalization.CultureInfo.InvariantCulture, out var parsed))
+            val = parsed;
+        else
+            return;
+        target[key] = val;
+    }
+}

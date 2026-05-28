@@ -17,6 +17,8 @@
 @inject TelnetService TelnetService
 @inject SerialConsoleService SerialConsoleService
 @inject MeshcomWebDesk.Models.ResolvedLogPath ResolvedLogPath
+@inject MeshcomWebDesk.Services.WeatherApiPollingService WeatherPollingService
+@inject MeshcomWebDesk.Services.WeatherLicenseService WeatherLicenseService
 @implements IDisposable
 
 <PageTitle>@Loc.T("Einstellungen", "Settings") – MeshCom WebDesk</PageTitle>
@@ -973,6 +975,142 @@
             }
         </div>
 
+        <!-- Wetter-API -->
+        <div class="settings-section @(IsOpen("weatherapi") ? "" : "settings-section-collapsed")">
+            <h2 class="settings-section-title" @onclick='() => Toggle("weatherapi")'>🌤️ @Loc.T("Wetter-API", "Weather API") <span class="section-chevron">@(IsOpen("weatherapi") ? "▲" : "▼")</span></h2>
+            @if (IsOpen("weatherapi")) {
+
+            @* Lizenz-Hinweis *@
+            @if (_model.WeatherApi.Provider != MeshcomWebDesk.Models.WeatherProvider.None)
+            {
+                @if (_weatherApiLicensed)
+                {
+                    <div class="settings-notice" style="background:#0d2b1a;border-color:#3fb950;margin-bottom:0.75rem">
+                        ✅ @Loc.T("Lizenziert für", "Licensed for") <strong>@_model.MyCallsign</strong>
+                    </div>
+                }
+                else
+                {
+                    <div class="settings-notice" style="background:#2b1a0d;border-color:#e3b341;margin-bottom:0.75rem">
+                        ⚠️ <strong>@Loc.T("Unregistrierte Testversion", "Unregistered trial version")</strong> –
+                        @Loc.T("Alle Funktionen aktiv. Bitte lizenzieren Sie diese Funktion mit Ihrem Rufzeichen.", "All features active. Please license this feature with your callsign.")
+                    </div>
+                }
+            }
+
+            <div class="settings-grid">
+                <label>@Loc.T("Provider", "Provider")</label>
+                <select @bind="_model.WeatherApi.Provider">
+                    <option value="@MeshcomWebDesk.Models.WeatherProvider.None">@Loc.T("Deaktiviert", "Disabled")</option>
+                    <option value="@MeshcomWebDesk.Models.WeatherProvider.Awekas">AWEKAS</option>
+                    <option value="@MeshcomWebDesk.Models.WeatherProvider.WUnderground">Weather Underground</option>
+                </select>
+
+                @if (_model.WeatherApi.Provider != MeshcomWebDesk.Models.WeatherProvider.None)
+                {
+                    <label>
+                        @Loc.T("Stations-ID", "Station ID")<br />
+                        <small>@Loc.T("AWEKAS: Benutzername · WUnderground: Station-ID (z.\u00a0B. IVIENNA123)", "AWEKAS: username · WUnderground: station ID (e.\u00a0g. IVIENNA123)")</small>
+                    </label>
+                    <input type="text" @bind="_model.WeatherApi.StationId" placeholder="@Loc.T("Stations-ID / Benutzername", "Station ID / Username")" />
+
+                    <label>API-Key / @Loc.T("Passwort", "Password")</label>
+                    <input type="password" @bind="_model.WeatherApi.ApiKey" autocomplete="new-password"
+                           placeholder="@Loc.T("API-Key oder Passwort des Anbieters", "API key or password of the provider")" />
+
+                    <label>
+                        @Loc.T("Abfrageintervall (Min.)", "Poll interval (min.)")<br />
+                        <small>@Loc.T("Mindestens 5 Minuten", "Minimum 5 minutes")</small>
+                    </label>
+                    <input type="number" min="5" max="60" style="width:6rem" @bind="_model.WeatherApi.PollIntervalMinutes" />
+
+                    <label>
+                        @Loc.T("Lizenzschlüssel", "License key")<br />
+                        <small>@Loc.T("Anforderung per E-Mail mit dem Rufzeichen.", "Request by e-mail with your callsign.")</small>
+                    </label>
+                    <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap">
+                        <input type="password" @bind="_model.WeatherApi.LicenseKey" autocomplete="new-password"
+                               placeholder="@Loc.T("Lizenzschlüssel (base64.signature)", "License key (base64.signature)")"
+                               style="flex:1;min-width:200px" />
+                        <a class="btn-add" style="text-decoration:none;white-space:nowrap"
+                           href="@($"mailto:meshcom@dh1fr.de?subject=WeatherAPI%20Lizenz%20{Uri.EscapeDataString(_model.MyCallsign ?? "")}&body=Rufzeichen%3A%20{Uri.EscapeDataString(_model.MyCallsign ?? "")}%0AProvider%3A%20{_model.WeatherApi.Provider}%0A%0ABitte%20sende%20mir%20einen%20Lizenzschl%C3%BCssel.")">
+                            ✉️ @Loc.T("Lizenz anfordern", "Request license")
+                        </a>
+                    </div>
+                }
+            </div>
+
+            @* Feld-Mapping *@
+            @if (_model.WeatherApi.Provider != MeshcomWebDesk.Models.WeatherProvider.None)
+            {
+                <div style="margin-top:1.25rem">
+                    <h3 style="font-size:1rem;margin-bottom:0.5rem">@Loc.T("Feld-Zuordnung (Wetter-API → JSON-Key)", "Field Mapping (Weather API → JSON Key)")</h3>
+                    <p><small>
+                        @Loc.T(
+                            "API-Feld: Standard-Feldname des Providers (z.\u00a0B. temp_out, humidity_out, wind_speed). JSON-Key: Ziel-Schlüssel in der Telemetrie-JSON-Datei (muss mit dem Telemetrie-Mapping übereinstimmen).",
+                            "API field: standard field name of the provider (e.\u00a0g. temp_out, humidity_out, wind_speed). JSON key: target key in the telemetry JSON file (must match the telemetry mapping).")
+                    </small></p>
+                    <table class="telemetry-mapping-table">
+                        <thead>
+                            <tr>
+                                <th>@Loc.T("API-Feld", "API Field")</th>
+                                <th>JSON-Key</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var kv in _model.WeatherApi.FieldMapping.ToList())
+                            {
+                                var apiField = kv.Key;
+                                <tr @key="apiField">
+                                    <td><input type="text" value="@kv.Key" readonly style="background:#161b22;color:#8b949e" /></td>
+                                    <td>
+                                        <input type="text" value="@kv.Value"
+                                               @onchange="e => _model.WeatherApi.FieldMapping[apiField] = e.Value?.ToString() ?? string.Empty" />
+                                    </td>
+                                    <td><button type="button" class="btn-remove" @onclick="() => _model.WeatherApi.FieldMapping.Remove(apiField)">🗑️</button></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    <div style="display:flex;gap:0.5rem;margin-top:0.5rem;flex-wrap:wrap">
+                        <input type="text" @bind="_newWeatherApiField" placeholder="@Loc.T("API-Feld (z.\u00a0B. temp_out)", "API field (e.\u00a0g. temp_out)")" style="width:180px" />
+                        <input type="text" @bind="_newWeatherJsonKey" placeholder="@Loc.T("JSON-Key (z.\u00a0B. aussentemperatur)", "JSON key (e.\u00a0g. aussentemperatur)")" style="width:200px" />
+                        <button type="button" class="btn-add" @onclick="AddWeatherFieldMapping">➕ @Loc.T("Zuordnung hinzufügen", "Add mapping")</button>
+                    </div>
+
+                    <div style="margin-top:0.75rem">
+                        <p><small><strong>@Loc.T("Verfügbare Standard-Felder", "Available standard fields"):</strong>
+                            temp_out, temp_in, humidity_out, humidity_in, pressure_rel, pressure_abs,
+                            wind_speed, wind_gust, wind_dir, rain_rate, rain_day, uv, solar_rad, dew_point
+                        </small></p>
+                    </div>
+
+                    @* Status-Anzeige *@
+                    @if (_weatherApiStatus != null)
+                    {
+                        <div class="settings-notice" style="margin-top:0.75rem;background:#161b22;border-color:#30363d">
+                            📡 @_weatherApiStatus
+                        </div>
+                    }
+
+                    <div style="margin-top:0.75rem">
+                        <button type="button" class="btn-send-now" @onclick="PollWeatherApiNowAsync" disabled="@_weatherApiPolling">
+                            @if (_weatherApiPolling)
+                            {
+                                <span>⏳ @Loc.T("Wird abgefragt…", "Fetching…")</span>
+                            }
+                            else
+                            {
+                                <span>🌤️ @Loc.T("Wetterdaten jetzt abrufen", "Fetch weather data now")</span>
+                            }
+                        </button>
+                    </div>
+                </div>
+            }
+            }
+        </div>
+
         <!-- Watchlist -->
         <div class="settings-section @(IsOpen("watch") ? "" : "settings-section-collapsed")">
             <h2 class="settings-section-title" @onclick='() => Toggle("watch")'>📻 @Loc.T("Watchlist", "Watchlist") <span class="section-chevron">@(IsOpen("watch") ? "▲" : "▼")</span></h2>
@@ -1842,6 +1980,13 @@
     private bool    _beaconSending;
     private string? _beaconResult;
 
+    // Weather API
+    private bool    _weatherApiLicensed;
+    private bool    _weatherApiPolling;
+    private string? _weatherApiStatus;
+    private string  _newWeatherApiField = string.Empty;
+    private string  _newWeatherJsonKey  = string.Empty;
+
     private DbTestResult? _dbTestResult;
     private bool          _dbTesting;
     private bool          _dbSettingUp;
@@ -1943,6 +2088,44 @@
         finally
         {
             _sendingNow = false;
+        }
+    }
+
+    private void AddWeatherFieldMapping()
+    {
+        var field = _newWeatherApiField.Trim();
+        var key   = _newWeatherJsonKey.Trim();
+        if (string.IsNullOrWhiteSpace(field) || string.IsNullOrWhiteSpace(key)) return;
+        _model.WeatherApi.FieldMapping[field] = key;
+        _newWeatherApiField = string.Empty;
+        _newWeatherJsonKey  = string.Empty;
+    }
+
+    private async Task PollWeatherApiNowAsync()
+    {
+        _weatherApiPolling = true;
+        _weatherApiStatus  = null;
+        try
+        {
+            await WeatherPollingService.PollAsync(_model.WeatherApi, CancellationToken.None);
+            _weatherApiLicensed = WeatherPollingService.IsLicensed;
+            if (WeatherPollingService.LastData?.Fields is { Count: > 0 } fields)
+            {
+                var preview = string.Join(" | ", fields.Take(5).Select(kv => $"{kv.Key}={kv.Value:F1}"));
+                _weatherApiStatus = $"✅ {Loc.T("Empfangen", "Received")}: {preview}";
+            }
+            else
+            {
+                _weatherApiStatus = $"⚠️ {WeatherPollingService.LastError ?? Loc.T("Keine Daten.", "No data.")}";
+            }
+        }
+        catch (Exception ex)
+        {
+            _weatherApiStatus = $"❌ {ex.Message}";
+        }
+        finally
+        {
+            _weatherApiPolling = false;
         }
     }
 
@@ -2512,8 +2695,19 @@
                 .ToList(),
             GroupLabels             = s.GroupLabels
                 .Select(g => new GroupLabelEntry { Group = g.Group, ShortLabel = g.ShortLabel, Label = g.Label })
-                .ToList()
+                .ToList(),
+            WeatherApi              = new MeshcomWebDesk.Models.WeatherApiSettings
+            {
+                Provider           = s.WeatherApi.Provider,
+                ApiKey             = s.WeatherApi.ApiKey,
+                StationId          = s.WeatherApi.StationId,
+                PollIntervalMinutes= s.WeatherApi.PollIntervalMinutes,
+                LicenseKey         = s.WeatherApi.LicenseKey,
+                FieldMapping       = new Dictionary<string, string>(s.WeatherApi.FieldMapping)
+            }
         };
+
+        _weatherApiLicensed = WeatherLicenseService.IsLicensed(s.WeatherApi.LicenseKey);
     }
 
     private void OnTelnetChange()
@@ -3180,6 +3374,9 @@
         // Group Labels
         public List<GroupLabelEntry> GroupLabels { get; set; } = GroupLabelEntry.Defaults.Select(g => new GroupLabelEntry { Group = g.Group, ShortLabel = g.ShortLabel, Label = g.Label }).ToList();
 
+        // Weather API
+        public MeshcomWebDesk.Models.WeatherApiSettings WeatherApi { get; set; } = new();
+
         public DatabaseSettings ToDbSettings() => new()
         {
             Provider              = DbProvider,
@@ -3305,7 +3502,8 @@
             SerialBaudRate          = SerialBaudRate,
             ConsoleLogEnabled       = ConsoleLogEnabled,
             QuickTexts = QuickTexts,
-            GroupLabels = GroupLabels
+            GroupLabels = GroupLabels,
+            WeatherApi = WeatherApi
         };
     }
 }

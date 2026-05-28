@@ -103,6 +103,7 @@ builder.Services.AddSingleton<IBotCommand, TimeCommand>();
 builder.Services.AddSingleton<IBotCommand, MhCommand>();
 builder.Services.AddSingleton<IBotCommand, PingCommand>();
 builder.Services.AddSingleton<IBotCommand, EchoCommand>();
+builder.Services.AddSingleton<IBotCommand, MeshcomWebDesk.Services.Bot.WeatherStatusCommand>();
 builder.Services.AddSingleton<BotCommandService>();
 builder.Services.AddSingleton<MeshcomUdpService>();
 builder.Services.AddSingleton<DataPersistenceService>();
@@ -124,6 +125,12 @@ builder.Services.AddSingleton<HmacConsoleService>();
 builder.Services.AddSingleton<ConsoleLogService>();
 builder.Services.AddHttpClient("MeshcomGateway").ConfigurePrimaryHttpMessageHandler(
     () => new HttpClientHandler { AllowAutoRedirect = true });
+builder.Services.AddHttpClient("WeatherApi").ConfigurePrimaryHttpMessageHandler(
+    () => new HttpClientHandler { AllowAutoRedirect = true });
+builder.Services.AddSingleton<MeshcomWebDesk.Services.Weather.AwekasProvider>();
+builder.Services.AddSingleton<MeshcomWebDesk.Services.Weather.WUndergroundProvider>();
+builder.Services.AddSingleton<MeshcomWebDesk.Services.WeatherLicenseService>();
+builder.Services.AddSingleton<MeshcomWebDesk.Services.WeatherApiPollingService>();
 builder.Services.AddSingleton<GatewayService>();
 builder.Services.AddSingleton<NodeManager>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<UpdateCheckService>());
@@ -133,6 +140,7 @@ builder.Services.AddSingleton<IMeshcomVariableExpander>(sp => sp.GetRequiredServ
 builder.Services.AddHostedService(sp => sp.GetRequiredService<MeshcomUdpService>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<DataPersistenceService>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<MqttService>());
+builder.Services.AddHostedService(sp => sp.GetRequiredService<MeshcomWebDesk.Services.WeatherApiPollingService>());
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
