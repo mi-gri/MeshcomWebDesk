@@ -36,6 +36,7 @@ public class WeatherStatusCommand : IBotCommand
         {
             WeatherProvider.Awekas       => "AWEKAS",
             WeatherProvider.WUnderground => "WUnderground",
+            WeatherProvider.Simulation   => "Simulation",
             _                            => "Unbekannt"
         };
         sb.Append($"Weather: {providerName}");

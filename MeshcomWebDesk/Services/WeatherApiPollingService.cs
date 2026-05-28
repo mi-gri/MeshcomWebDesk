@@ -127,8 +127,9 @@ public sealed class WeatherApiPollingService : IHostedService, IAsyncDisposable
     }
 
     /// <summary>
-    /// Applies FieldMapping and writes the result as a flat JSON object to TelemetryFilePath.
-    /// The keys in the JSON are either the mapped TelemetryMapping-keys or the raw WeatherFields constants.
+    /// Writes weather data as a flat JSON object to TelemetryFilePath.
+    /// Keys are the WeatherFields constants (e.g. "temp_out", "humidity_out") – use these
+    /// directly as JSON-Key values in the Telemetry Mapping configuration.
     /// </summary>
     private async Task WriteJsonFileAsync(WeatherApiSettings s, WeatherData data, CancellationToken ct)
     {
@@ -140,23 +141,17 @@ public sealed class WeatherApiPollingService : IHostedService, IAsyncDisposable
             return;
         }
 
-        // Build output dictionary: mapped key → value
+        // Write fields directly using WeatherFields constants as JSON keys.
+        // Configure the Telemetry Mapping with e.g. JSON-Key "temp_out", Label "T.out", Unit "°C".
         var output = new Dictionary<string, object>();
 
         foreach (var (fieldKey, value) in data.Fields)
-        {
-            // Resolve the output key: either from FieldMapping or use the field key directly
-            var outputKey = s.FieldMapping.TryGetValue(fieldKey, out var mapped) && !string.IsNullOrWhiteSpace(mapped)
-                ? mapped
-                : fieldKey;
+            output[fieldKey] = value;
 
-            output[outputKey] = value;
-        }
-
-        // Add metadata (not picked up by TelemetryMapping unless explicitly mapped)
-        output["_provider"]    = data.ProviderName;
-        output["_observed"]    = data.ObservedUtc.ToString("yyyy-MM-ddTHH:mm:ssZ");
-        output["_licensed"]    = IsLicensed;
+        // Metadata fields (prefixed with _ so they don't clash with weather fields)
+        output["_provider"]  = data.ProviderName;
+        output["_observed"]  = data.ObservedUtc.ToString("yyyy-MM-ddTHH:mm:ssZ");
+        output["_licensed"]  = IsLicensed;
 
         var json = JsonSerializer.Serialize(output, new JsonSerializerOptions { WriteIndented = true });
 

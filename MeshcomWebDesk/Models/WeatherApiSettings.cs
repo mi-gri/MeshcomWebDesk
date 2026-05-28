@@ -22,13 +22,6 @@ public class WeatherApiSettings
     /// Leave empty to run in unlicensed test mode.
     /// </summary>
     public string LicenseKey { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Maps weather API field names to TelemetryMapping JSON keys.
-    /// Example: { "temp_out": "aussentemperatur", "humidity": "luftfeuchtigkeit" }
-    /// If empty, direct field names are used.
-    /// </summary>
-    public Dictionary<string, string> FieldMapping { get; set; } = new();
 }
 
 /// <summary>Supported weather data providers.</summary>

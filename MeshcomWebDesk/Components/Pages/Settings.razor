@@ -888,7 +888,32 @@
                         {
                             var e = entry;
                             <tr @key="e">
-                                <td><input type="text" @bind="e.JsonKey" /></td>
+                                <td>
+                                    @if (_model.WeatherApi.Provider != MeshcomWebDesk.Models.WeatherProvider.None)
+                                    {
+                                        <select @bind="e.JsonKey" title="@Loc.T("Wetter-API Feld wählen oder direkt eingeben", "Select Weather API field or type manually")">
+                                            <option value="">– @Loc.T("Feld wählen", "Select field") –</option>
+                                            <option value="temp_out">temp_out (@Loc.T("Außentemperatur", "Outdoor temp."))</option>
+                                            <option value="temp_in">temp_in (@Loc.T("Innentemperatur", "Indoor temp."))</option>
+                                            <option value="humidity_out">humidity_out (@Loc.T("Außenfeuchte", "Outdoor humidity"))</option>
+                                            <option value="humidity_in">humidity_in (@Loc.T("Innenfeuchte", "Indoor humidity"))</option>
+                                            <option value="pressure_rel">pressure_rel (@Loc.T("Luftdruck relativ", "Pressure relative"))</option>
+                                            <option value="pressure_abs">pressure_abs (@Loc.T("Luftdruck absolut", "Pressure absolute"))</option>
+                                            <option value="wind_speed">wind_speed (@Loc.T("Windgeschwindigkeit", "Wind speed"))</option>
+                                            <option value="wind_gust">wind_gust (@Loc.T("Böen", "Wind gust"))</option>
+                                            <option value="wind_dir">wind_dir (@Loc.T("Windrichtung", "Wind direction"))</option>
+                                            <option value="rain_rate">rain_rate (@Loc.T("Regenrate", "Rain rate"))</option>
+                                            <option value="rain_day">rain_day (@Loc.T("Regen heute", "Rain today"))</option>
+                                            <option value="uv">uv (UV-Index)</option>
+                                            <option value="solar_rad">solar_rad (@Loc.T("Sonnenstrahlung W/m²", "Solar radiation W/m²"))</option>
+                                            <option value="dew_point">dew_point (@Loc.T("Taupunkt", "Dew point"))</option>
+                                        </select>
+                                    }
+                                    else
+                                    {
+                                        <input type="text" @bind="e.JsonKey" />
+                                    }
+                                </td>
                                 <td><input type="text" @bind="e.Label" /></td>
                                 <td><input type="text" @bind="e.Unit" /></td>
                                 <td><input type="number" min="0" max="4" style="width:4rem" @bind="e.Decimals" /></td>
@@ -1054,49 +1079,19 @@
             @if (_model.WeatherApi.Provider != MeshcomWebDesk.Models.WeatherProvider.None)
             {
                 <div style="margin-top:1.25rem">
-                    <h3 style="font-size:1rem;margin-bottom:0.5rem">@Loc.T("Feld-Zuordnung (Wetter-API → JSON-Key)", "Field Mapping (Weather API → JSON Key)")</h3>
-                    <p><small>
-                        @Loc.T(
-                            "API-Feld: Standard-Feldname des Providers (z.\u00a0B. temp_out, humidity_out, wind_speed). JSON-Key: Ziel-Schlüssel in der Telemetrie-JSON-Datei (muss mit dem Telemetrie-Mapping übereinstimmen).",
-                            "API field: standard field name of the provider (e.\u00a0g. temp_out, humidity_out, wind_speed). JSON key: target key in the telemetry JSON file (must match the telemetry mapping).")
-                    </small></p>
-                    <table class="telemetry-mapping-table">
-                        <thead>
-                            <tr>
-                                <th>@Loc.T("API-Feld", "API Field")</th>
-                                <th>JSON-Key</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var kv in _model.WeatherApi.FieldMapping.ToList())
-                            {
-                                var apiField = kv.Key;
-                                <tr @key="apiField">
-                                    <td><input type="text" value="@kv.Key" readonly style="background:#161b22;color:#8b949e" /></td>
-                                    <td>
-                                        <input type="text" value="@kv.Value"
-                                               @onchange="e => _model.WeatherApi.FieldMapping[apiField] = e.Value?.ToString() ?? string.Empty" />
-                                    </td>
-                                    <td><button type="button" class="btn-remove" @onclick="() => _model.WeatherApi.FieldMapping.Remove(apiField)">🗑️</button></td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                    <div style="display:flex;gap:0.5rem;margin-top:0.5rem;flex-wrap:wrap">
-                        <input type="text" @bind="_newWeatherApiField" placeholder="@Loc.T("API-Feld (z.\u00a0B. temp_out)", "API field (e.\u00a0g. temp_out)")" style="width:180px" />
-                        <input type="text" @bind="_newWeatherJsonKey" placeholder="@Loc.T("JSON-Key (z.\u00a0B. aussentemperatur)", "JSON key (e.\u00a0g. aussentemperatur)")" style="width:200px" />
-                        <button type="button" class="btn-add" @onclick="AddWeatherFieldMapping">➕ @Loc.T("Zuordnung hinzufügen", "Add mapping")</button>
+                    <div class="settings-notice" style="background:#161b22;border-color:#1f6feb">
+                        ℹ️ @Loc.T(
+                            "Die Wetter-API schreibt die Messwerte direkt in die Telemetrie-JSON-Datei. Verwende folgende Feldnamen als JSON-Key im Telemetrie-Mapping:",
+                            "The Weather API writes measurement values directly to the telemetry JSON file. Use these field names as JSON-Key in the Telemetry Mapping:")
+                        <br /><br />
+                        <code style="font-size:0.8rem;line-height:1.8">
+                            temp_out &nbsp;·&nbsp; temp_in &nbsp;·&nbsp; humidity_out &nbsp;·&nbsp; humidity_in &nbsp;·&nbsp;
+                            pressure_rel &nbsp;·&nbsp; pressure_abs &nbsp;·&nbsp; wind_speed &nbsp;·&nbsp; wind_gust &nbsp;·&nbsp;
+                            wind_dir &nbsp;·&nbsp; rain_rate &nbsp;·&nbsp; rain_day &nbsp;·&nbsp; uv &nbsp;·&nbsp;
+                            solar_rad &nbsp;·&nbsp; dew_point
+                        </code>
                     </div>
 
-                    <div style="margin-top:0.75rem">
-                        <p><small><strong>@Loc.T("Verfügbare Standard-Felder", "Available standard fields"):</strong>
-                            temp_out, temp_in, humidity_out, humidity_in, pressure_rel, pressure_abs,
-                            wind_speed, wind_gust, wind_dir, rain_rate, rain_day, uv, solar_rad, dew_point
-                        </small></p>
-                    </div>
-
-                    @* Status-Anzeige *@
                     @if (_weatherApiStatus != null)
                     {
                         <div class="settings-notice" style="margin-top:0.75rem;background:#161b22;border-color:#30363d">
@@ -1994,8 +1989,6 @@
     private bool    _weatherApiLicensed;
     private bool    _weatherApiPolling;
     private string? _weatherApiStatus;
-    private string  _newWeatherApiField = string.Empty;
-    private string  _newWeatherJsonKey  = string.Empty;
 
     private DbTestResult? _dbTestResult;
     private bool          _dbTesting;
@@ -2099,16 +2092,6 @@
         {
             _sendingNow = false;
         }
-    }
-
-    private void AddWeatherFieldMapping()
-    {
-        var field = _newWeatherApiField.Trim();
-        var key   = _newWeatherJsonKey.Trim();
-        if (string.IsNullOrWhiteSpace(field) || string.IsNullOrWhiteSpace(key)) return;
-        _model.WeatherApi.FieldMapping[field] = key;
-        _newWeatherApiField = string.Empty;
-        _newWeatherJsonKey  = string.Empty;
     }
 
     private async Task PollWeatherApiNowAsync()
@@ -2712,8 +2695,7 @@
                 ApiKey             = s.WeatherApi.ApiKey,
                 StationId          = s.WeatherApi.StationId,
                 PollIntervalMinutes= s.WeatherApi.PollIntervalMinutes,
-                LicenseKey         = s.WeatherApi.LicenseKey,
-                FieldMapping       = new Dictionary<string, string>(s.WeatherApi.FieldMapping)
+                LicenseKey         = s.WeatherApi.LicenseKey
             }
         };
 
@@ -3385,9 +3367,7 @@
         public List<GroupLabelEntry> GroupLabels { get; set; } = GroupLabelEntry.Defaults.Select(g => new GroupLabelEntry { Group = g.Group, ShortLabel = g.ShortLabel, Label = g.Label }).ToList();
 
         // Weather API
-        public MeshcomWebDesk.Models.WeatherApiSettings WeatherApi { get; set; } = new();
-
-        public DatabaseSettings ToDbSettings() => new()
+        public MeshcomWebDesk.Models.WeatherApiSettings WeatherApi { get; set; } = new();        public DatabaseSettings ToDbSettings() => new()
         {
             Provider              = DbProvider,
             MySqlConnectionString = DbMySqlConnectionString,
