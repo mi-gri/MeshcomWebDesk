@@ -41,5 +41,8 @@ public enum WeatherProvider
     Awekas = 1,
 
     /// <summary>Weather Underground (api.weather.com).</summary>
-    WUnderground = 2
+    WUnderground = 2,
+
+    /// <summary>Simulation mode – returns realistic fake data for testing (no API key required).</summary>
+    Simulation = 99
 }

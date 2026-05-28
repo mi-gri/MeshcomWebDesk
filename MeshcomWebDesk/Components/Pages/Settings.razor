@@ -1004,10 +1004,13 @@
                     <option value="@MeshcomWebDesk.Models.WeatherProvider.None">@Loc.T("Deaktiviert", "Disabled")</option>
                     <option value="@MeshcomWebDesk.Models.WeatherProvider.Awekas">AWEKAS</option>
                     <option value="@MeshcomWebDesk.Models.WeatherProvider.WUnderground">Weather Underground</option>
+                    <option value="@MeshcomWebDesk.Models.WeatherProvider.Simulation">🧪 @Loc.T("Simulation (Testdaten, kein API-Key)", "Simulation (test data, no API key)")</option>
                 </select>
 
                 @if (_model.WeatherApi.Provider != MeshcomWebDesk.Models.WeatherProvider.None)
                 {
+                    @if (_model.WeatherApi.Provider != MeshcomWebDesk.Models.WeatherProvider.Simulation)
+                    {
                     <label>
                         @Loc.T("Stations-ID", "Station ID")<br />
                         <small>@Loc.T("AWEKAS: Benutzername · WUnderground: Station-ID (z.\u00a0B. IVIENNA123)", "AWEKAS: username · WUnderground: station ID (e.\u00a0g. IVIENNA123)")</small>
@@ -1017,6 +1020,13 @@
                     <label>API-Key / @Loc.T("Passwort", "Password")</label>
                     <input type="password" @bind="_model.WeatherApi.ApiKey" autocomplete="new-password"
                            placeholder="@Loc.T("API-Key oder Passwort des Anbieters", "API key or password of the provider")" />
+                    }
+                    else
+                    {
+                    <div class="settings-notice" style="background:#0d1f2d;border-color:#1f6feb;grid-column:1/-1">
+                        🧪 @Loc.T("Simulationsmodus aktiv – es werden realistische Testdaten generiert. Kein API-Key oder Netzwerkzugang erforderlich.", "Simulation mode active – realistic test data is generated. No API key or network access required.")
+                    </div>
+                    }
 
                     <label>
                         @Loc.T("Abfrageintervall (Min.)", "Poll interval (min.)")<br />

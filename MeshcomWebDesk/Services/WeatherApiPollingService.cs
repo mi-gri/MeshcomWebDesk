@@ -18,6 +18,7 @@ public sealed class WeatherApiPollingService : IHostedService, IAsyncDisposable
     private readonly WeatherLicenseService            _licenseService;
     private readonly AwekasProvider                   _awekasProvider;
     private readonly WUndergroundProvider             _wuProvider;
+    private readonly SimulationProvider               _simProvider;
     private readonly ILogger<WeatherApiPollingService> _logger;
 
     private Timer? _timer;
@@ -39,12 +40,14 @@ public sealed class WeatherApiPollingService : IHostedService, IAsyncDisposable
         WeatherLicenseService licenseService,
         AwekasProvider awekasProvider,
         WUndergroundProvider wuProvider,
+        SimulationProvider simProvider,
         ILogger<WeatherApiPollingService> logger)
     {
         _settings       = settings;
         _licenseService = licenseService;
         _awekasProvider = awekasProvider;
         _wuProvider     = wuProvider;
+        _simProvider    = simProvider;
         _logger         = logger;
     }
 
@@ -101,6 +104,7 @@ public sealed class WeatherApiPollingService : IHostedService, IAsyncDisposable
         {
             WeatherProvider.Awekas       => _awekasProvider,
             WeatherProvider.WUnderground => _wuProvider,
+            WeatherProvider.Simulation   => _simProvider,
             _                            => throw new InvalidOperationException($"Unknown provider: {s.Provider}")
         };
 
