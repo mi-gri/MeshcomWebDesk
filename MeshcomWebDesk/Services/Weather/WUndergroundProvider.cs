@@ -26,10 +26,8 @@ public class WUndergroundProvider : IWeatherProvider
     public async Task<WeatherData?> FetchAsync(string apiKey, string stationId, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(apiKey) || string.IsNullOrWhiteSpace(stationId))
-        {
-            _logger.LogWarning("WUnderground: apiKey or stationId is empty");
-            return null;
-        }
+            throw new InvalidOperationException(
+                "Weather Underground: Station-ID und API Key müssen eingetragen sein.");
 
         try
         {
@@ -41,21 +39,26 @@ public class WUndergroundProvider : IWeatherProvider
             _logger.LogDebug("WUnderground fetch: {Url}", url.Replace(apiKey, "***"));
 
             using var response = await client.GetAsync(url, ct);
+            var json = await response.Content.ReadAsStringAsync(ct);
 
             if (!response.IsSuccessStatusCode)
-            {
-                var err = await response.Content.ReadAsStringAsync(ct);
-                _logger.LogWarning("WUnderground returned HTTP {StatusCode}: {Error}", response.StatusCode, err);
-                return null;
-            }
+                throw new InvalidOperationException(
+                    $"Weather Underground HTTP {(int)response.StatusCode}: {json.Trim()}");
 
-            var json = await response.Content.ReadAsStringAsync(ct);
-            return ParseResponse(json);
+            _logger.LogInformation("WUnderground raw response: {Json}", json);
+
+            var result = ParseResponse(json);
+            if (result == null)
+                throw new InvalidOperationException(
+                    $"Weather Underground: Antwort empfangen, aber keine bekannten Felder. Antwort: {json.Trim()}");
+
+            return result;
         }
+        catch (InvalidOperationException) { throw; }
         catch (Exception ex)
         {
             _logger.LogError(ex, "WUnderground fetch failed");
-            return null;
+            throw new InvalidOperationException($"Weather Underground Netzwerkfehler: {ex.Message}", ex);
         }
     }
 

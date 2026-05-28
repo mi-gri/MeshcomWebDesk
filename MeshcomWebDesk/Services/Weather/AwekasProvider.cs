@@ -1,4 +1,5 @@
-using System.Net.Http.Json;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using MeshcomWebDesk.Services.Weather;
 
@@ -6,17 +7,17 @@ namespace MeshcomWebDesk.Services.Weather;
 
 /// <summary>
 /// Fetches current weather data from the AWEKAS network.
-/// API endpoint: https://api.awekas.at/getData.php
-/// Authentication: username (stationId) + password (apiKey)
-/// Documentation: https://www.awekas.at (registered users)
+/// API endpoint: https://api.awekas.at/station.php
+/// Authentication: id (AWEKAS User-ID) + pw (AWEKAS password/API key)
+/// Response: JSON with flat weather fields
 /// </summary>
 public class AwekasProvider : IWeatherProvider
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<AwekasProvider> _logger;
 
-    // AWEKAS API endpoint for current station data
-    private const string BaseUrl = "https://api.awekas.at/getData.php";
+    // Confirmed working AWEKAS API endpoint
+    private const string BaseUrl = "https://api.awekas.at/station.php";
 
     public string Name => "AWEKAS";
 
@@ -29,88 +30,136 @@ public class AwekasProvider : IWeatherProvider
     public async Task<WeatherData?> FetchAsync(string apiKey, string stationId, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(apiKey) || string.IsNullOrWhiteSpace(stationId))
+            throw new InvalidOperationException(
+                "AWEKAS: User-ID (Stations-ID) und Passwort (API Key) müssen eingetragen sein.");
+
+        // station.php: erst Klartext versuchen, dann MD5 – AWEKAS-Doku unterscheidet
+        // zwischen Upload-API (MD5) und Lese-API (unklar), daher beide probieren.
+        var md5Hash  = ComputeMd5(apiKey);
+        var attempts = new[] { ("Klartext", apiKey), ("MD5", md5Hash) };
+
+        Exception? lastEx = null;
+        foreach (var (mode, pw) in attempts)
         {
-            _logger.LogWarning("AWEKAS: apiKey or stationId is empty");
-            return null;
-        }
-
-        try
-        {
-            var client = _httpClientFactory.CreateClient("WeatherApi");
-            // AWEKAS uses basic auth or token query params depending on API version.
-            // Format: ?id=<stationId>&pw=<apiKey>&lang=de&output=json
-            var url = $"{BaseUrl}?id={Uri.EscapeDataString(stationId)}&pw={Uri.EscapeDataString(apiKey)}&lang=de&output=json";
-
-            _logger.LogDebug("AWEKAS fetch: {Url}", url.Replace(apiKey, "***"));
-
-            using var response = await client.GetAsync(url, ct);
-
-            if (!response.IsSuccessStatusCode)
+            try
             {
-                _logger.LogWarning("AWEKAS returned HTTP {StatusCode}", response.StatusCode);
-                return null;
+                var result = await TryFetchAsync(stationId, pw, mode, ct);
+                if (result != null)
+                    return result;
             }
+            catch (InvalidOperationException ex)
+            {
+                lastEx = ex;
+                _logger.LogDebug("AWEKAS {Mode} fehlgeschlagen: {Msg}", mode, ex.Message);
+            }
+        }
 
-            var json = await response.Content.ReadAsStringAsync(ct);
-            return ParseResponse(json);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "AWEKAS fetch failed");
-            return null;
-        }
+        throw lastEx ?? new InvalidOperationException("AWEKAS: Keine Daten empfangen.");
     }
 
-    private WeatherData? ParseResponse(string json)
+    private async Task<WeatherData?> TryFetchAsync(string stationId, string pw, string mode, CancellationToken ct)
     {
-        try
-        {
-            // AWEKAS returns a semicolon-delimited string or JSON depending on the endpoint version.
-            // The getData.php endpoint returns a semicolon-separated line:
-            // station_id;temp;hum;baro;wind;gust;windir;rain;rain_rate;uvindex;solar;temp_in;hum_in;baro_abs;dew
-            // Try JSON first, fall back to semicolon format.
-            if (json.TrimStart().StartsWith("{") || json.TrimStart().StartsWith("["))
-                return ParseJsonResponse(json);
+        var client = _httpClientFactory.CreateClient("WeatherApi");
+        var url = $"{BaseUrl}?id={Uri.EscapeDataString(stationId)}&pw={Uri.EscapeDataString(pw)}";
 
-            return ParseSemicolonResponse(json);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "AWEKAS: failed to parse response");
-            return null;
-        }
-    }
+        _logger.LogDebug("AWEKAS [{Mode}] fetch: {Url}", mode, url.Replace(pw, "***"));
 
-    /// <summary>Parses AWEKAS JSON response format.</summary>
-    private WeatherData? ParseJsonResponse(string json)
-    {
+        using var response = await client.GetAsync(url, ct);
+        var json = await response.Content.ReadAsStringAsync(ct);
+
+        if (!response.IsSuccessStatusCode)
+            throw new InvalidOperationException($"AWEKAS HTTP {(int)response.StatusCode}: {json.Trim()}");
+
+        _logger.LogInformation("AWEKAS [{Mode}] Antwort: {Json}", mode, json);
+
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
 
+        // Fehler-Check
+        if (root.TryGetProperty("error", out var errProp) &&
+            errProp.ValueKind == JsonValueKind.String &&
+            !string.IsNullOrWhiteSpace(errProp.GetString()))
+            throw new InvalidOperationException($"AWEKAS [{mode}]: {errProp.GetString()}");
+
+        var result = ParseJsonResponse(root);
+        if (result == null)
+            throw new InvalidOperationException(
+                $"AWEKAS [{mode}]: Antwort empfangen, aber keine bekannten Felder. Antwort: {json.Trim()}");
+
+        return result;
+    }
+
+
+    /// <summary>Parses AWEKAS JSON response format.</summary>
+    private WeatherData? ParseJsonResponse(JsonElement root)
+    {
         // AWEKAS JSON may be wrapped in array
         var obs = root.ValueKind == JsonValueKind.Array ? root[0] : root;
 
         var data = new WeatherData { ProviderName = Name };
+
+        // Bekannte AWEKAS JSON-Feldnamen (station.php Erfolgsantwort)
         TryAddDouble(obs, "temperature",      data.Fields, WeatherFields.TempOutdoor);
         TryAddDouble(obs, "temperature_in",   data.Fields, WeatherFields.TempIndoor);
+        TryAddDouble(obs, "temp",             data.Fields, WeatherFields.TempOutdoor);
+        TryAddDouble(obs, "outtemp",          data.Fields, WeatherFields.TempOutdoor);
+        TryAddDouble(obs, "outTemp",          data.Fields, WeatherFields.TempOutdoor);
         TryAddDouble(obs, "humidity",         data.Fields, WeatherFields.HumidityOutdoor);
         TryAddDouble(obs, "humidity_in",      data.Fields, WeatherFields.HumidityIndoor);
+        TryAddDouble(obs, "outHumidity",      data.Fields, WeatherFields.HumidityOutdoor);
         TryAddDouble(obs, "baromrel",         data.Fields, WeatherFields.PressureRelative);
         TryAddDouble(obs, "baromabs",         data.Fields, WeatherFields.PressureAbsolute);
+        TryAddDouble(obs, "barometer",        data.Fields, WeatherFields.PressureRelative);
+        TryAddDouble(obs, "pressure",         data.Fields, WeatherFields.PressureRelative);
         TryAddDouble(obs, "windspeed",        data.Fields, WeatherFields.WindSpeed);
+        TryAddDouble(obs, "windSpeed",        data.Fields, WeatherFields.WindSpeed);
+        TryAddDouble(obs, "wind_speed",       data.Fields, WeatherFields.WindSpeed);
         TryAddDouble(obs, "windgust",         data.Fields, WeatherFields.WindGust);
+        TryAddDouble(obs, "windGust",         data.Fields, WeatherFields.WindGust);
+        TryAddDouble(obs, "wind_gust",        data.Fields, WeatherFields.WindGust);
         TryAddDouble(obs, "winddir",          data.Fields, WeatherFields.WindDirection);
+        TryAddDouble(obs, "windDir",          data.Fields, WeatherFields.WindDirection);
+        TryAddDouble(obs, "wind_dir",         data.Fields, WeatherFields.WindDirection);
         TryAddDouble(obs, "rainrate",         data.Fields, WeatherFields.RainRate);
+        TryAddDouble(obs, "rainRate",         data.Fields, WeatherFields.RainRate);
+        TryAddDouble(obs, "rain_rate",        data.Fields, WeatherFields.RainRate);
         TryAddDouble(obs, "dailyrain",        data.Fields, WeatherFields.RainDaily);
+        TryAddDouble(obs, "dayRain",          data.Fields, WeatherFields.RainDaily);
+        TryAddDouble(obs, "day_rain",         data.Fields, WeatherFields.RainDaily);
         TryAddDouble(obs, "uv",               data.Fields, WeatherFields.UvIndex);
+        TryAddDouble(obs, "UV",               data.Fields, WeatherFields.UvIndex);
+        TryAddDouble(obs, "uvindex",          data.Fields, WeatherFields.UvIndex);
         TryAddDouble(obs, "solarradiation",   data.Fields, WeatherFields.SolarRadiation);
+        TryAddDouble(obs, "radiation",        data.Fields, WeatherFields.SolarRadiation);
+        TryAddDouble(obs, "solar",            data.Fields, WeatherFields.SolarRadiation);
         TryAddDouble(obs, "dewpoint",         data.Fields, WeatherFields.DewPoint);
+        TryAddDouble(obs, "dewPoint",         data.Fields, WeatherFields.DewPoint);
+        TryAddDouble(obs, "dew",              data.Fields, WeatherFields.DewPoint);
 
-        if (obs.TryGetProperty("observationtime", out var ts) &&
-            DateTime.TryParse(ts.GetString(), out var dt))
-            data.ObservedUtc = dt.ToUniversalTime();
+        // Zeitstempel
+        foreach (var tsName in new[] { "observationtime", "time", "datetime", "date", "timestamp" })
+        {
+            if (obs.TryGetProperty(tsName, out var ts) &&
+                DateTime.TryParse(ts.GetString(), out var dt))
+            {
+                data.ObservedUtc = dt.ToUniversalTime();
+                break;
+            }
+        }
 
-        return data.Fields.Count > 0 ? data : null;
+        // Wenn keine bekannten Felder gefunden: alle numerischen Felder loggen
+        if (data.Fields.Count == 0)
+        {
+            var allKeys = new List<string>();
+            foreach (var prop in obs.EnumerateObject())
+                allKeys.Add($"{prop.Name}={prop.Value}");
+            _logger.LogWarning(
+                "AWEKAS: Keine bekannten Felder in der Antwort. Verfügbare Felder: {Fields}",
+                string.Join(", ", allKeys));
+            return null;
+        }
+
+        return data;
     }
 
     /// <summary>
@@ -168,5 +217,12 @@ public class AwekasProvider : IWeatherProvider
         else
             return;
         target[key] = val;
+    }
+
+    /// <summary>Berechnet den MD5-Hash des Passworts (Kleinbuchstaben-Hex) wie von AWEKAS erwartet.</summary>
+    private static string ComputeMd5(string input)
+    {
+        var bytes = MD5.HashData(Encoding.UTF8.GetBytes(input));
+        return Convert.ToHexString(bytes).ToLowerInvariant();
     }
 }

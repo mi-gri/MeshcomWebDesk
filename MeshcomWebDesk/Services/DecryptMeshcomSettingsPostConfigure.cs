@@ -28,6 +28,7 @@ public sealed class DecryptMeshcomSettingsPostConfigure : IPostConfigureOptions<
         options.Mqtt.Password                  = TryDecrypt(options.Mqtt.Password);
         options.Ai.ApiKey                      = TryDecrypt(options.Ai.ApiKey);
         options.TelnetPassword                 = TryDecrypt(options.TelnetPassword);
+        options.WeatherApi.ApiKey              = TryDecrypt(options.WeatherApi.ApiKey);
 
         // Decrypt per-node TLS passwords
         foreach (var node in options.Nodes)

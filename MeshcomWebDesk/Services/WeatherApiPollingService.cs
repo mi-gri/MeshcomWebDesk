@@ -110,11 +110,21 @@ public sealed class WeatherApiPollingService : IHostedService, IAsyncDisposable
 
         _logger.LogDebug("WeatherApi polling {Provider} (licensed={Licensed})", provider.Name, IsLicensed);
 
-        var data = await provider.FetchAsync(s.ApiKey, s.StationId, ct);
+        WeatherData? data;
+        try
+        {
+            data = await provider.FetchAsync(s.ApiKey, s.StationId, ct);
+        }
+        catch (InvalidOperationException ex)
+        {
+            LastError = ex.Message;
+            _logger.LogWarning("WeatherApi: {Error}", ex.Message);
+            return;
+        }
 
         if (data == null)
         {
-            LastError = $"{provider.Name}: No data received";
+            LastError = $"{provider.Name}: Keine Daten empfangen";
             _logger.LogWarning("WeatherApi: no data from {Provider}", provider.Name);
             return;
         }
