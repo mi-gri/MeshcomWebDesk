@@ -17,6 +17,8 @@
 @inject TelnetService TelnetService
 @inject SerialConsoleService SerialConsoleService
 @inject MeshcomWebDesk.Models.ResolvedLogPath ResolvedLogPath
+@inject MeshcomWebDesk.Services.WeatherApiPollingService WeatherPollingService
+@inject MeshcomWebDesk.Services.WeatherLicenseService WeatherLicenseService
 @implements IDisposable
 
 <PageTitle>@Loc.T("Einstellungen", "Settings") – MeshCom WebDesk</PageTitle>
@@ -886,7 +888,32 @@
                         {
                             var e = entry;
                             <tr @key="e">
-                                <td><input type="text" @bind="e.JsonKey" /></td>
+                                <td>
+                                    @if (_model.WeatherApi.Provider != MeshcomWebDesk.Models.WeatherProvider.None)
+                                    {
+                                        <select @bind="e.JsonKey" title="@Loc.T("Wetter-API Feld wählen oder direkt eingeben", "Select Weather API field or type manually")">
+                                            <option value="">– @Loc.T("Feld wählen", "Select field") –</option>
+                                            <option value="temp_out">temp_out (@Loc.T("Außentemperatur", "Outdoor temp."))</option>
+                                            <option value="temp_in">temp_in (@Loc.T("Innentemperatur", "Indoor temp."))</option>
+                                            <option value="humidity_out">humidity_out (@Loc.T("Außenfeuchte", "Outdoor humidity"))</option>
+                                            <option value="humidity_in">humidity_in (@Loc.T("Innenfeuchte", "Indoor humidity"))</option>
+                                            <option value="pressure_rel">pressure_rel (@Loc.T("Luftdruck relativ", "Pressure relative"))</option>
+                                            <option value="pressure_abs">pressure_abs (@Loc.T("Luftdruck absolut", "Pressure absolute"))</option>
+                                            <option value="wind_speed">wind_speed (@Loc.T("Windgeschwindigkeit", "Wind speed"))</option>
+                                            <option value="wind_gust">wind_gust (@Loc.T("Böen", "Wind gust"))</option>
+                                            <option value="wind_dir">wind_dir (@Loc.T("Windrichtung", "Wind direction"))</option>
+                                            <option value="rain_rate">rain_rate (@Loc.T("Regenrate", "Rain rate"))</option>
+                                            <option value="rain_day">rain_day (@Loc.T("Regen heute", "Rain today"))</option>
+                                            <option value="uv">uv (UV-Index)</option>
+                                            <option value="solar_rad">solar_rad (@Loc.T("Sonnenstrahlung W/m²", "Solar radiation W/m²"))</option>
+                                            <option value="dew_point">dew_point (@Loc.T("Taupunkt", "Dew point"))</option>
+                                        </select>
+                                    }
+                                    else
+                                    {
+                                        <input type="text" @bind="e.JsonKey" />
+                                    }
+                                </td>
                                 <td><input type="text" @bind="e.Label" /></td>
                                 <td><input type="text" @bind="e.Unit" /></td>
                                 <td><input type="number" min="0" max="4" style="width:4rem" @bind="e.Decimals" /></td>
@@ -970,6 +997,140 @@
                     </div>
                 }
             </div>
+            }
+        </div>
+
+        <!-- Wetter-API -->
+        <div class="settings-section @(IsOpen("weatherapi") ? "" : "settings-section-collapsed")">
+            <h2 class="settings-section-title" @onclick='() => Toggle("weatherapi")'>🌤️ @Loc.T("Wetter-API", "Weather API") <span class="section-chevron">@(IsOpen("weatherapi") ? "▲" : "▼")</span></h2>
+            @if (IsOpen("weatherapi")) {
+
+            @* Lizenz-Hinweis *@
+            @if (_model.WeatherApi.Provider != MeshcomWebDesk.Models.WeatherProvider.None)
+            {
+                @if (_weatherApiLicensed)
+                {
+                    <div class="settings-notice" style="background:#0d2b1a;border-color:#3fb950;margin-bottom:0.75rem">
+                        ✅ @Loc.T("Lizenziert für", "Licensed for") <strong>@_model.MyCallsign</strong>
+                    </div>
+                }
+                else
+                {
+                    <div class="settings-notice" style="background:#2b1a0d;border-color:#e3b341;margin-bottom:0.75rem">
+                        ⚠️ <strong>@Loc.T("Unregistrierte Testversion", "Unregistered trial version")</strong> –
+                        @Loc.T("Nur Simulation verfügbar. Für echte Wetterdaten bitte einen Kaffee spenden ☕ und Lizenzschlüssel per E-Mail anfordern.", "Simulation only. For real weather data, please buy a coffee ☕ and request a license key by e-mail.")
+                    </div>
+                }
+            }
+
+            <div class="settings-grid">
+                <label>@Loc.T("Provider", "Provider")</label>
+                <select @bind="_model.WeatherApi.Provider">
+                    <option value="@MeshcomWebDesk.Models.WeatherProvider.None">@Loc.T("Deaktiviert", "Disabled")</option>
+                    <option value="@MeshcomWebDesk.Models.WeatherProvider.Awekas">AWEKAS</option>
+                    <option value="@MeshcomWebDesk.Models.WeatherProvider.WUnderground">Weather Underground</option>
+                    <option value="@MeshcomWebDesk.Models.WeatherProvider.Simulation">🧪 @Loc.T("Simulation (Testdaten, kein API-Key)", "Simulation (test data, no API key)")</option>
+                </select>
+
+                @if (_model.WeatherApi.Provider != MeshcomWebDesk.Models.WeatherProvider.None)
+                {
+                    @if (_model.WeatherApi.Provider != MeshcomWebDesk.Models.WeatherProvider.Simulation)
+                    {
+                    <label>
+                        @Loc.T("Stations-ID", "Station ID")<br />
+                        <small>@Loc.T("AWEKAS: Benutzername · WUnderground: Station-ID (z.\u00a0B. IVIENNA123)", "AWEKAS: username · WUnderground: station ID (e.\u00a0g. IVIENNA123)")</small>
+                    </label>
+                    <input type="text" @bind="_model.WeatherApi.StationId" placeholder="@Loc.T("Stations-ID / Benutzername", "Station ID / Username")" />
+
+                    <label>API-Key / @Loc.T("Passwort", "Password")</label>
+                    <input type="password" @bind="_model.WeatherApi.ApiKey" autocomplete="new-password"
+                           placeholder="@Loc.T("API-Key oder Passwort des Anbieters", "API key or password of the provider")" />
+                    }
+                    else
+                    {
+                    <div class="settings-notice" style="background:#0d1f2d;border-color:#1f6feb;grid-column:1/-1">
+                        🧪 @Loc.T("Simulationsmodus aktiv – es werden realistische Testdaten generiert. Kein API-Key oder Netzwerkzugang erforderlich.", "Simulation mode active – realistic test data is generated. No API key or network access required.")
+                    </div>
+                    }
+
+                    <label>
+                        @Loc.T("Abfrageintervall (Min.)", "Poll interval (min.)")<br />
+                        <small>@Loc.T("Mindestens 5 Minuten", "Minimum 5 minutes")</small>
+                    </label>
+                    <input type="number" min="5" max="60" style="width:6rem" @bind="_model.WeatherApi.PollIntervalMinutes" />
+
+                    <label>
+                        @Loc.T("Lizenzschlüssel", "License key")<br />
+                        <small>@Loc.T("Anforderung per E-Mail mit dem Rufzeichen.", "Request by e-mail with your callsign.")</small>
+                    </label>
+                    <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap">
+                        <input type="password" @bind="_model.WeatherApi.LicenseKey" autocomplete="new-password"
+                               placeholder="@Loc.T("Lizenzschlüssel (base64.signature)", "License key (base64.signature)")"
+                               style="flex:1;min-width:200px" />
+                        @{
+                            var _ssid = _model.MyCallsign?.Trim() ?? "";
+                            var _mailTo = $"mailto:meshcom@dh1fr.de?subject=WeatherAPI%20Lizenz%20{Uri.EscapeDataString(_ssid)}&body=Hallo%2C%0A%0Aich%20m%C3%B6chte%20einen%20Lizenzschl%C3%BCssel%20f%C3%BCr%20die%20Wetter-API-Funktion%20in%20MeshcomWebDesk%20anfordern.%0A%0ARufzeichen%20(inkl.%20SSID)%3A%20{Uri.EscapeDataString(_ssid)}%0AProvider%3A%20{_model.WeatherApi.Provider}%0A%0AIch%20habe%20einen%20Kaffee%20spendiert%20%E2%98%95%20(Transaktions-ID%2FScreenshot%20im%20Anhang).%0A%0AVielen%20Dank!";
+                        }
+                        @if (string.IsNullOrWhiteSpace(_ssid))
+                        {
+                            <div class="settings-error" style="margin-top:0;font-size:12px">⚠️ @Loc.T("Bitte zuerst das Rufzeichen (inkl. SSID) in den Allgemeinen Einstellungen eintragen!", "Please enter your callsign (incl. SSID) in General Settings first!")</div>
+                        }
+                        else
+                        {
+                            <a class="btn-add" style="text-decoration:none;white-space:nowrap" href="@_mailTo">
+                                ✉️ @Loc.T("Lizenz anfordern", "Request license")
+                            </a>
+                        }
+                        <a class="btn-add" style="text-decoration:none;white-space:nowrap;background:#f8c31b;color:#000;border-color:#f8c31b"
+                           href="https://www.buymeacoffee.com/dh1fr" target="_blank">
+                            ☕ Buy me a Coffee
+                        </a>
+                        <a class="btn-add" style="text-decoration:none;white-space:nowrap;background:#003087;color:#fff;border-color:#003087"
+                           href="https://paypal.me/DH1FR" target="_blank">
+                            💳 PayPal
+                        </a>
+                    </div>
+                }
+            </div>
+
+            @* Feld-Mapping *@
+            @if (_model.WeatherApi.Provider != MeshcomWebDesk.Models.WeatherProvider.None)
+            {
+                <div style="margin-top:1.25rem">
+                    <div class="settings-notice" style="background:#161b22;border-color:#1f6feb">
+                        ℹ️ @Loc.T(
+                            "Die Wetter-API schreibt die Messwerte direkt in die Telemetrie-JSON-Datei. Verwende folgende Feldnamen als JSON-Key im Telemetrie-Mapping:",
+                            "The Weather API writes measurement values directly to the telemetry JSON file. Use these field names as JSON-Key in the Telemetry Mapping:")
+                        <br /><br />
+                        <code style="font-size:0.8rem;line-height:1.8">
+                            temp_out &nbsp;·&nbsp; temp_in &nbsp;·&nbsp; humidity_out &nbsp;·&nbsp; humidity_in &nbsp;·&nbsp;
+                            pressure_rel &nbsp;·&nbsp; pressure_abs &nbsp;·&nbsp; wind_speed &nbsp;·&nbsp; wind_gust &nbsp;·&nbsp;
+                            wind_dir &nbsp;·&nbsp; rain_rate &nbsp;·&nbsp; rain_day &nbsp;·&nbsp; uv &nbsp;·&nbsp;
+                            solar_rad &nbsp;·&nbsp; dew_point
+                        </code>
+                    </div>
+
+                    @if (_weatherApiStatus != null)
+                    {
+                        <div class="settings-notice" style="margin-top:0.75rem;background:#161b22;border-color:#30363d">
+                            📡 @_weatherApiStatus
+                        </div>
+                    }
+
+                    <div style="margin-top:0.75rem">
+                        <button type="button" class="btn-send-now" @onclick="PollWeatherApiNowAsync" disabled="@_weatherApiPolling">
+                            @if (_weatherApiPolling)
+                            {
+                                <span>⏳ @Loc.T("Wird abgefragt…", "Fetching…")</span>
+                            }
+                            else
+                            {
+                                <span>🌤️ @Loc.T("Wetterdaten jetzt abrufen", "Fetch weather data now")</span>
+                            }
+                        </button>
+                    </div>
+                </div>
+            }
             }
         </div>
 
@@ -1842,6 +2003,11 @@
     private bool    _beaconSending;
     private string? _beaconResult;
 
+    // Weather API
+    private bool    _weatherApiLicensed;
+    private bool    _weatherApiPolling;
+    private string? _weatherApiStatus;
+
     private DbTestResult? _dbTestResult;
     private bool          _dbTesting;
     private bool          _dbSettingUp;
@@ -1943,6 +2109,34 @@
         finally
         {
             _sendingNow = false;
+        }
+    }
+
+    private async Task PollWeatherApiNowAsync()
+    {
+        _weatherApiPolling = true;
+        _weatherApiStatus  = null;
+        try
+        {
+            await WeatherPollingService.PollAsync(_model.WeatherApi, CancellationToken.None);
+            _weatherApiLicensed = WeatherPollingService.IsLicensed;
+            if (WeatherPollingService.LastData?.Fields is { Count: > 0 } fields)
+            {
+                var preview = string.Join(" | ", fields.Take(5).Select(kv => $"{kv.Key}={kv.Value:F1}"));
+                _weatherApiStatus = $"✅ {Loc.T("Empfangen", "Received")}: {preview}";
+            }
+            else
+            {
+                _weatherApiStatus = $"⚠️ {WeatherPollingService.LastError ?? Loc.T("Keine Daten.", "No data.")}";
+            }
+        }
+        catch (Exception ex)
+        {
+            _weatherApiStatus = $"❌ {ex.Message}";
+        }
+        finally
+        {
+            _weatherApiPolling = false;
         }
     }
 
@@ -2512,8 +2706,18 @@
                 .ToList(),
             GroupLabels             = s.GroupLabels
                 .Select(g => new GroupLabelEntry { Group = g.Group, ShortLabel = g.ShortLabel, Label = g.Label })
-                .ToList()
+                .ToList(),
+            WeatherApi              = new MeshcomWebDesk.Models.WeatherApiSettings
+            {
+                Provider           = s.WeatherApi.Provider,
+                ApiKey             = s.WeatherApi.ApiKey,
+                StationId          = s.WeatherApi.StationId,
+                PollIntervalMinutes= s.WeatherApi.PollIntervalMinutes,
+                LicenseKey         = s.WeatherApi.LicenseKey
+            }
         };
+
+        _weatherApiLicensed = WeatherLicenseService.IsLicensed(s.WeatherApi.LicenseKey);
     }
 
     private void OnTelnetChange()
@@ -3180,7 +3384,8 @@
         // Group Labels
         public List<GroupLabelEntry> GroupLabels { get; set; } = GroupLabelEntry.Defaults.Select(g => new GroupLabelEntry { Group = g.Group, ShortLabel = g.ShortLabel, Label = g.Label }).ToList();
 
-        public DatabaseSettings ToDbSettings() => new()
+        // Weather API
+        public MeshcomWebDesk.Models.WeatherApiSettings WeatherApi { get; set; } = new();        public DatabaseSettings ToDbSettings() => new()
         {
             Provider              = DbProvider,
             MySqlConnectionString = DbMySqlConnectionString,
@@ -3305,7 +3510,8 @@
             SerialBaudRate          = SerialBaudRate,
             ConsoleLogEnabled       = ConsoleLogEnabled,
             QuickTexts = QuickTexts,
-            GroupLabels = GroupLabels
+            GroupLabels = GroupLabels,
+            WeatherApi = WeatherApi
         };
     }
 }

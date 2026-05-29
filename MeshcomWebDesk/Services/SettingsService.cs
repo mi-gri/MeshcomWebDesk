@@ -192,7 +192,15 @@ public class SettingsService
                 ["TelnetCertThumbprint"]    = s.TelnetCertThumbprint,
                 ["SerialPortName"]          = s.SerialPortName,
                 ["SerialBaudRate"]          = s.SerialBaudRate,
-                ["ConsoleLogEnabled"]       = s.ConsoleLogEnabled
+                ["ConsoleLogEnabled"]       = s.ConsoleLogEnabled,
+                ["WeatherApi"] = new JsonObject
+                {
+                    ["Provider"]            = s.WeatherApi.Provider.ToString(),
+                    ["ApiKey"]              = Encrypt(s.WeatherApi.ApiKey),
+                    ["StationId"]           = s.WeatherApi.StationId,
+                    ["PollIntervalMinutes"] = s.WeatherApi.PollIntervalMinutes,
+                    ["LicenseKey"]          = s.WeatherApi.LicenseKey
+                }
             }
         };
 
