@@ -73,6 +73,7 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 - Smart routing: broadcast replies from a known callsign appear in their direct tab
 - **Auto-scroll** to the latest message when a tab is opened or a new message arrives
 - **Unread badge** – inactive tabs show a yellow counter badge for new messages
+- **New-message divider** – a horizontal *„Neue Nachrichten / New messages"* line separates already-read messages from newly arrived ones after returning to a tab
 - **ACK delivery indicator** on every outgoing message:
   - `⏳` grey – waiting for node echo (message queued)
   - `✓` blue – node has transmitted over LoRa (sequence number assigned)
@@ -338,6 +339,22 @@ This is particularly useful when the node is **not physically accessible** via U
 - **Instant send button** in Settings for immediate test send without waiting for the interval
 - Example messages: `TM: 🌡=10.7C 🧭=1022hPa 💧=86% 🌬=0.0m/s` or split into `TM1:` / `TM2:` when needed
 - 📖 **[Home Assistant integration guide](docs/homeassistant-telemetry.md)** – complete example with weather station sensors, `rest_command` and automation
+
+### 🌤️ Weather API (Wetter-API)
+- **Automatic weather data**: fetch live measurements from external weather platforms and feed them directly into the telemetry JSON file
+- **Supported providers**:
+  - **AWEKAS** – Austrian weather network; uses `https://api.awekas.at/current.php?key=<API-KEY>`
+  - **Weather Underground (PWS)** – uses `https://api.weather.com/v2/pws/observations/current`
+  - **Simulation** – generates realistic test data without any API key or network access (always available)
+- **Configurable fields**: temperature (in/out), humidity (in/out), pressure (rel/abs), wind speed/gust/direction, rain rate/daily total, UV index, solar radiation, dew point
+- **Telemetry integration**: field names (`temp_out`, `humidity_out`, `pressure_rel`, …) can be used directly as JSON-Key in the Telemetry Mapping
+- **Bot command** `--weather`: reports provider, last received values, license status and timestamp
+- **License model**: real provider access requires a personal license key tied to the station callsign incl. SSID
+  - Without a valid license: only simulation mode; poll interval fixed at **24 hours**; no telemetry output
+  - License keys are issued upon a ☕ coffee donation (Buy me a Coffee / PayPal)
+  - License request button in Settings pre-fills an e-mail with callsign and provider
+- **Poll interval**: configurable 5–60 minutes (licensed); fixed 24 h (unlicensed)
+- **Upload format for AWEKAS virtual station**: `http://ws.awekas.at/weatherstation/updateweatherstation.php?ID=<id>&PASSWORD=<pw>&dateutc=now&tempf=<F>&humidity=<pct>&baromin=<inHg>&windspeedmph=<mph>&windgustmph=<mph>&winddir=<deg>&rainin=0.0&dailyrainin=0.0&softwaretype=custom&action=updateraw`
 
 ### 📝 Logging (Serilog)
 - Rolling daily log files with configurable retention

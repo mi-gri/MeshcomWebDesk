@@ -1,8 +1,12 @@
 ﻿# Changelog
 
-## [1.10.2] – in development (dev)
+## [1.11.0] – in development (dev)
 
 ### Features
+- **Weather API (AWEKAS & Weather Underground)**: External weather data can now be fetched from [AWEKAS](https://www.awekas.at) or [Weather Underground](https://www.wunderground.com) and written directly to the telemetry JSON file. Provider, station ID, API key, and poll interval are configurable in Settings → 🌤️ Weather API. A simulation mode (no API key required) generates realistic test data for offline testing.
+- **Weather API – License model**: Real provider access (AWEKAS / Weather Underground) requires a personal license key tied to the station callsign incl. SSID. Without a license, only the simulation mode is available and the poll interval is fixed at 24 hours. License keys are issued upon a coffee donation (☕ Buy me a Coffee / 💳 PayPal). The license request button pre-fills an e-mail with callsign, provider and donation reference.
+- **Weather API – Bot command**: New bot command `--weather` reports the current provider, last received values, license status and timestamp.
+- **New-message divider line**: Unread messages in chat tabs are now visually separated from already-read messages by a horizontal divider line (*"Neue Nachrichten"* / *"New messages"*), making it easy to identify where new messages start after returning to a tab.
 - **Ping confirmation dialog**: A browser confirmation is shown when sending `ping` or `--ping` to a group or broadcast tab, preventing accidental transmissions.
 - **Combined ACK display**: The ACK indicator now shows LoRa and Gateway delivery combined (`✓✓ ☁️✓`) – users can see whether their message arrived via LoRa, the gateway, or both.
 - **NET Console** (renamed from HMAC Console): New HMAC-TCP console mode added; renamed consistently throughout the UI and settings.
@@ -13,6 +17,7 @@
 - **Tab message limit** (`TabMaxMessages`): Each chat tab can be limited to a maximum number of messages to prevent unbounded memory growth.
 - **French TTS support**: French (`fr-FR`) added to the browser TTS locale map.
 - **Full i18n coverage**: All new UI texts are fully translated into DE / EN / IT / ES / FR.
+- **Donate buttons**: Buy me a Coffee and PayPal donation buttons are now shown everywhere (About page, Welcome dialog, Weather API license section).
 
 ### Bugfixes
 - **Fix Gateway Source not saved**: The `GatewayServer` setting (OE / DL source selection) was missing from `SettingsService.SaveMeshcomSettingsAsync` and was therefore reset to the default on every restart.
@@ -29,6 +34,8 @@
 - **Fix LoRa highlight state lost on tab switch**: LoRa highlight state is now persisted in `localStorage`.
 - **Fix translation syntax errors in IT/ES/FR**: A broken dictionary entry (`Accept` key split from its value) caused Docker build failures; fixed in all three files.
 - **Fix French TTS locale missing**: French was not in the `speakText` locale map and fell back to German; now correctly uses `fr-FR`.
+- **Fix Weather API key not decrypted on load**: `WeatherApi.ApiKey` was encrypted on save but not decrypted when loading settings, causing false authentication failures.
+- **Fix Weather API settings not persisted**: The entire `WeatherApi` block was missing from `SettingsService`, so provider/key/interval were reset to defaults on every restart.
 
 ---
 
