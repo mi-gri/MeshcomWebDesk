@@ -28,14 +28,12 @@ public class AwekasProvider : IWeatherProvider
         if (string.IsNullOrWhiteSpace(apiKey))
             throw new InvalidOperationException("AWEKAS: API-Key muss eingetragen sein.");
 
-        var client = _httpClientFactory.CreateClient("WeatherApi");
-        var url = $"{ApiUrl}?key={Uri.EscapeDataString(apiKey)}";
+        // AWEKAS shows the key URL-encoded in the portal – decode automatically so the
+        // user can paste it directly without manual decoding.
+        var decodedKey = Uri.UnescapeDataString(apiKey);
 
-        // TEMP DEBUG – Key-Länge und Prefix prüfen (kein Klartext im Log)
-        _logger.LogWarning("AWEKAS DEBUG: Key-Länge={Len}, Prefix='{Prefix}', URL={Url}",
-            apiKey.Length,
-            apiKey.Length >= 4 ? apiKey[..4] : apiKey,
-            url);
+        var client = _httpClientFactory.CreateClient("WeatherApi");
+        var url = $"{ApiUrl}?key={Uri.EscapeDataString(decodedKey)}";
 
         using var response = await client.GetAsync(url, ct);
         var json = await response.Content.ReadAsStringAsync(ct);

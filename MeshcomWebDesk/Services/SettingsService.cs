@@ -31,8 +31,62 @@ public class SettingsService
         _protector    = protector;
     }
 
-    /// <summary>Encrypts a non-empty value with AES-256-GCM and prepends "aes:".</summary>
-    private string Encrypt(string value) => _protector.Encrypt(value);
+    /// <summary>
+    /// Encrypts a non-empty plaintext value with AES-256-GCM.
+    /// If the value is already encrypted (aes: / dp: prefix) it is returned unchanged
+    /// to prevent double-encryption of stale model values.
+    /// </summary>
+    private string Encrypt(string value)
+    {
+        if (string.IsNullOrEmpty(value)) return value;
+        if (value.StartsWith("aes:", StringComparison.Ordinal) ||
+            value.StartsWith("dp:",  StringComparison.Ordinal))
+        {
+            _logger.LogWarning(
+                "SettingsService.Encrypt: Wert hat bereits Verschlüsselungs-Prefix '{Prefix}' – " +
+                "wird unverändert gespeichert. Bitte Wert neu eingeben.",
+                value[..4]);
+            return value;
+        }
+        return _protector.Encrypt(value);
+    }
+
+    /// <summary>
+    /// Encrypts a new plaintext value. If the new value is empty, reads the existing
+    /// encrypted value from the override file and keeps it unchanged.
+    /// This prevents overwriting a valid key with an empty value when the UI omits
+    /// pre-filling password/key fields for security reasons.
+    /// </summary>
+    private string EncryptOrKeepExisting(string newValue, string section, string key)
+    {
+        if (!string.IsNullOrEmpty(newValue))
+            return Encrypt(newValue);
+
+        // New value is empty – keep the existing encrypted value from disk
+        try
+        {
+            if (File.Exists(_overridePath))
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(_overridePath));
+                if (doc.RootElement.TryGetProperty("Meshcom", out var meshcom) &&
+                    meshcom.TryGetProperty(section, out var sec) &&
+                    sec.TryGetProperty(key, out var existing))
+                {
+                    var existing_val = existing.GetString() ?? string.Empty;
+                    if (!string.IsNullOrEmpty(existing_val))
+                    {
+                        _logger.LogDebug("SettingsService: {Section}.{Key} leer – vorhandener Wert wird beibehalten.", section, key);
+                        return existing_val;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "SettingsService: Konnte vorhandenen Wert für {Section}.{Key} nicht lesen.", section, key);
+        }
+        return string.Empty;
+    }
 
     public async Task SaveMeshcomSettingsAsync(MeshcomSettings s)
     {
@@ -194,7 +248,7 @@ public class SettingsService
                 ["WeatherApi"] = new JsonObject
                 {
                     ["Provider"]            = s.WeatherApi.Provider.ToString(),
-                    ["ApiKey"]              = Encrypt(s.WeatherApi.ApiKey),
+                    ["ApiKey"]              = EncryptOrKeepExisting(s.WeatherApi.ApiKey, "WeatherApi", "ApiKey"),
                     ["StationId"]           = s.WeatherApi.StationId,
                     ["PollIntervalMinutes"] = s.WeatherApi.PollIntervalMinutes,
                     ["LicenseKey"]          = s.WeatherApi.LicenseKey

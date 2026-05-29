@@ -2118,7 +2118,22 @@
         _weatherApiStatus  = null;
         try
         {
-            await WeatherPollingService.PollAsync(_model.WeatherApi, CancellationToken.None);
+            // Always use the live decrypted API key from IOptionsMonitor so that the correct
+            // plaintext key is sent even if the model was loaded before the last save or
+            // before a settings.key rotation. All other fields (provider, station, …) come
+            // from the form model so the user sees the effect of unsaved changes immediately.
+            var liveKey = SettingsMonitor.CurrentValue.WeatherApi.ApiKey;
+            var pollSettings = new MeshcomWebDesk.Models.WeatherApiSettings
+            {
+                Provider            = _model.WeatherApi.Provider,
+                StationId           = _model.WeatherApi.StationId,
+                PollIntervalMinutes = _model.WeatherApi.PollIntervalMinutes,
+                LicenseKey          = _model.WeatherApi.LicenseKey,
+                ApiKey              = string.IsNullOrEmpty(_model.WeatherApi.ApiKey)
+                                        ? liveKey
+                                        : _model.WeatherApi.ApiKey
+            };
+            await WeatherPollingService.PollAsync(pollSettings, CancellationToken.None);
             _weatherApiLicensed = WeatherPollingService.IsLicensed;
             if (WeatherPollingService.LastData?.Fields is { Count: > 0 } fields)
             {
@@ -2710,7 +2725,7 @@
             WeatherApi              = new MeshcomWebDesk.Models.WeatherApiSettings
             {
                 Provider           = s.WeatherApi.Provider,
-                ApiKey             = s.WeatherApi.ApiKey,
+                ApiKey             = string.Empty, // never pre-fill – user must re-enter
                 StationId          = s.WeatherApi.StationId,
                 PollIntervalMinutes= s.WeatherApi.PollIntervalMinutes,
                 LicenseKey         = s.WeatherApi.LicenseKey

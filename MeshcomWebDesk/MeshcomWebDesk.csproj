@@ -29,4 +29,16 @@
     </AssemblyAttribute>
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Runtime-generated files must NOT be copied to the output directory.
+         appsettings.override.json is written by SettingsService at runtime and must
+         never be overwritten by a build. -->
+    <None Update="data\appsettings.override.json">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
+    <None Update="data\**\*">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

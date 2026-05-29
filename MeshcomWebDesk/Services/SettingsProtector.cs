@@ -53,6 +53,17 @@ public sealed class SettingsProtector : ISettingsProtector
     {
         if (string.IsNullOrEmpty(plaintext)) return plaintext;
 
+        // Guard: never double-encrypt an already-encrypted value
+        if (plaintext.StartsWith("aes:", StringComparison.Ordinal) ||
+            plaintext.StartsWith("dp:",  StringComparison.Ordinal))
+        {
+            _logger.LogWarning(
+                "SettingsProtector.Encrypt: Eingabewert hat bereits Prefix '{Prefix}' – " +
+                "Doppelverschlüsselung verhindert. Rohwert wird zurückgegeben.",
+                plaintext[..4]);
+            return plaintext;
+        }
+
         var nonce      = RandomNumberGenerator.GetBytes(AesGcm.NonceByteSizes.MaxSize); // 12 bytes
         var tag        = new byte[AesGcm.TagByteSizes.MaxSize];                         // 16 bytes
         var data       = Encoding.UTF8.GetBytes(plaintext);
