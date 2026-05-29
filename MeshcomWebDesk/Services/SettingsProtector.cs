@@ -81,11 +81,8 @@ public sealed class SettingsProtector : ISettingsProtector
 
         if (value.StartsWith("dp:", StringComparison.Ordinal))
         {
-            // Legacy Data Protection value – cannot decrypt cross-platform.
-            // Return empty string so the user re-enters the value once.
-            _logger.LogWarning(
-                "Veralteter dp:-Wert gefunden. Bitte Einstellung neu speichern (plattformübergreifend nicht entschlüsselbar).");
-            return string.Empty;
+            // Legacy Data Protection value – handled by DecryptMeshcomSettingsPostConfigure directly.
+            return value;
         }
 
         if (!value.StartsWith("aes:", StringComparison.Ordinal)) return value;
