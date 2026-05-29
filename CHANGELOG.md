@@ -20,8 +20,12 @@
 - **Docker – Serielles Interface**: Dokumentation für die Durchreichung von USB/TTY-Geräten in `docker-compose.yml` ergänzt (siehe README → *Serial Console (USB) in Docker*).
 
 ### Bugfixes
+- **Weather API – AWEKAS API-Key URL-Kodierung**: AWEKAS zeigt den Key im Portal URL-kodiert an (`%2B`, `%2F`, `%3D`); wird jetzt automatisch via `Uri.UnescapeDataString` vor dem API-Aufruf dekodiert.
 - **Weather API – Einstellungen Speichern/Laden**: Der `WeatherApi`-Block fehlte in der Serialisierung von `SettingsService.cs`; Einstellungen wurden nicht persistiert. Behoben.
 - **Weather API – API-Key Entschlüsselung**: `WeatherApi.ApiKey` wurde beim Speichern verschlüsselt, beim Laden aber nicht entschlüsselt. `DecryptMeshcomSettingsPostConfigure` korrigiert.
+- **Doppelverschlüsselung verhindert**: `SettingsProtector.Encrypt` und `SettingsService.Encrypt` prüfen jetzt auf `aes:`/`dp:`-Prefix und verhindern eine doppelte Verschlüsselung bereits verschlüsselter Werte.
+- **API-Key-Feld nie vorausgefüllt**: Passwort- und Key-Felder in der Settings-UI werden beim Laden leer angezeigt; beim Speichern mit leerem Feld bleibt der bestehende verschlüsselte Wert in der Datei erhalten (`EncryptOrKeepExisting`).
+- **Build überschreibt Runtime-Daten nicht mehr**: `data/**` wurde bisher bei jedem Build nach `bin/Debug/net10.0/` kopiert und überschrieb die zur Laufzeit gespeicherten Einstellungen; jetzt `CopyToOutputDirectory=Never`.
 - **Lautsprecher-Icon**: Das Lautsprecher-Icon in der Statusleiste bleibt nach einem Chat-Seiten-Reload erhalten (Zustand wird wie das Glocken-Icon gespeichert).
 
 ---

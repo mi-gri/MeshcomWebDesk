@@ -1369,6 +1369,27 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 
  ## 📋 Changelog
 
+### v1.11.0
+- **feat:** 🌤️ **Weather API (Wetter-API)** – Live-Wetterdaten von externen Providern als Telemetrie-Felder nutzbar
+  - **AWEKAS** (`https://api.awekas.at/current.php?key=...`) und **Weather Underground** unterstützt
+  - **Simulations-Provider**: Offline-Testbetrieb ohne API-Key (Datei-basiert oder Zufallswerte)
+  - **Lizenzmodell**: Ohne Lizenz nur Simulation verfügbar (Poll-Intervall 24 h, kein Telemetrie-Schreiben); mit Lizenz voller Betrieb
+  - **Lizenz-Anforderung**: Per E-Mail-Button mit vorausgefülltem Rufzeichen inkl. SSID
+  - **Bot-Befehl `--weather`**: Zeigt Provider, letzten Messwert, Lizenz- und Registrierungsstatus
+  - **Einstellungen**: Eigener Bereich mit Provider-Auswahl, API-Key/Station-ID, Poll-Intervall und Lizenz-Eingabe
+- **feat:** 💬 **Neue Nachrichten – Trennlinie** – Sichtbare Trennlinie „Neue Nachrichten / New messages" im Chat-Tab (DE/EN)
+- **feat:** ☕ **Buy Me a Coffee** – Zusätzlich zu PayPal als Spendenoption in About, Willkommensdialog und Weather-API-Lizenzbereich
+- **feat:** 🖥️ **Serial Console** – Konsolen-Seite unterstützt TLS-Verbindung oder direkten USB-Seriell-Zugriff (115200 Baud); umschaltbar in Einstellungen
+- **feat:** ♻️ **OTA-Update über Konsole** – Befehl `--ota-update` mit 5-Sekunden-Countdown-Dialog
+- **feat:** 🔄 **Neustart über Konsole** – Befehl `--reboot` mit Bestätigungsdialog
+- **fix:** 🌤️ **AWEKAS API-Key URL-Kodierung** – AWEKAS zeigt den Key im Portal URL-kodiert an; wird jetzt automatisch dekodiert
+- **fix:** 🌤️ **Weather API – Einstellungen Persistenz** – `WeatherApi`-Block fehlte in der Serialisierung; Einstellungen wurden nicht gespeichert
+- **fix:** 🌤️ **Weather API – API-Key Entschlüsselung** – Key wurde verschlüsselt, aber beim Laden nicht entschlüsselt; `DecryptMeshcomSettingsPostConfigure` korrigiert
+- **fix:** 🔐 **Doppelverschlüsselung verhindert** – `aes:`/`dp:`-Prefix wird erkannt; bereits verschlüsselte Werte werden nicht nochmals verschlüsselt
+- **fix:** 🔐 **API-Key-Feld leer beim Laden** – Passwort-/Key-Felder werden nie vorausgefüllt; beim Speichern mit leerem Feld bleibt der bestehende Wert erhalten
+- **fix:** 🔧 **Build überschreibt Runtime-Daten nicht mehr** – `data/**` wird nicht mehr bei Build nach `bin/Debug` kopiert
+- **fix:** 🔊 **Lautsprecher-Icon** – Zustand nach Chat-Seiten-Reload erhalten
+
 ### v1.10.4 *(in development)*
 
 ### v1.10.3
