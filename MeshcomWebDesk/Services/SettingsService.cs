@@ -1,7 +1,6 @@
 ﻿using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Microsoft.AspNetCore.DataProtection;
 using MeshcomWebDesk.Models;
 
 namespace MeshcomWebDesk.Services;
@@ -19,22 +18,21 @@ public class SettingsService
 {
     private readonly string _overridePath;
     private readonly ILogger<SettingsService> _logger;
-    private readonly IDataProtector _protector;
+    private readonly ISettingsProtector _protector;
 
     public SettingsService(IConfiguration config, ILogger<SettingsService> logger,
-                           IDataProtectionProvider dataProtection)
+                           ISettingsProtector protector)
     {
         var dataPath  = config.GetValue<string>($"{MeshcomSettings.SectionName}:DataPath")
                         ?? Path.GetTempPath();
         Directory.CreateDirectory(dataPath);
         _overridePath = Path.Combine(dataPath, "appsettings.override.json");
         _logger       = logger;
-        _protector    = dataProtection.CreateProtector("MeshcomWebDesk.Settings.v1");
+        _protector    = protector;
     }
 
-    /// <summary>Encrypts a non-empty value with the Data Protection API and prepends "dp:".</summary>
-    private string Encrypt(string value) =>
-        string.IsNullOrEmpty(value) ? value : "dp:" + _protector.Protect(value);
+    /// <summary>Encrypts a non-empty value with AES-256-GCM and prepends "aes:".</summary>
+    private string Encrypt(string value) => _protector.Encrypt(value);
 
     public async Task SaveMeshcomSettingsAsync(MeshcomSettings s)
     {

@@ -95,6 +95,13 @@ Directory.CreateDirectory(keyPath);
 builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new System.IO.DirectoryInfo(keyPath));
 
+// Platform-independent AES-256-GCM encryption for sensitive settings fields.
+// The key file (settings.key) is stored alongside the Data Protection keys and can
+// be shared between Windows and Linux so that settings saved on one platform are
+// readable on any other.
+builder.Services.AddSingleton<ISettingsProtector>(sp =>
+    new SettingsProtector(keyPath, sp.GetRequiredService<ILogger<SettingsProtector>>()));
+
 // Register services
 builder.Services.AddSingleton<QsoSummaryService>();
 builder.Services.AddSingleton<ChatService>();
