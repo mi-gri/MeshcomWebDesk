@@ -31,7 +31,11 @@ public class AwekasProvider : IWeatherProvider
         var client = _httpClientFactory.CreateClient("WeatherApi");
         var url = $"{ApiUrl}?key={Uri.EscapeDataString(apiKey)}";
 
-        _logger.LogDebug("AWEKAS fetch: {Url}", ApiUrl + "?key=***");
+        // TEMP DEBUG – Key-Länge und Prefix prüfen (kein Klartext im Log)
+        _logger.LogWarning("AWEKAS DEBUG: Key-Länge={Len}, Prefix='{Prefix}', URL={Url}",
+            apiKey.Length,
+            apiKey.Length >= 4 ? apiKey[..4] : apiKey,
+            url);
 
         using var response = await client.GetAsync(url, ct);
         var json = await response.Content.ReadAsStringAsync(ct);
