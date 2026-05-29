@@ -86,7 +86,11 @@ public sealed class WeatherApiPollingService : IHostedService, IAsyncDisposable
 
         await PollAsync(s, CancellationToken.None);
 
-        var interval = TimeSpan.FromMinutes(Math.Max(MinInterval.TotalMinutes, s.PollIntervalMinutes));
+        // Without license: fixed 24h interval; with license: use configured interval (min. 5 min)
+        var interval = IsLicensed
+            ? TimeSpan.FromMinutes(Math.Max(MinInterval.TotalMinutes, s.PollIntervalMinutes))
+            : TimeSpan.FromHours(24);
+
         ScheduleNext(interval);
     }
 
@@ -97,8 +101,16 @@ public sealed class WeatherApiPollingService : IHostedService, IAsyncDisposable
 
     internal async Task PollAsync(WeatherApiSettings s, CancellationToken ct)
     {
-        // Validate license (non-blocking – unlicensed is allowed but flagged)
+        // Validate license – real providers and telemetry output require a valid license
         IsLicensed = _licenseService.IsLicensed(s.LicenseKey);
+
+        // Without a valid license only Simulation is allowed
+        if (!IsLicensed && s.Provider is WeatherProvider.Awekas or WeatherProvider.WUnderground)
+        {
+            LastError = "⚠️ Keine gültige Lizenz – echter API-Abruf gesperrt. Nur Simulation verfügbar.";
+            _logger.LogWarning("WeatherApi: unlicensed, provider {Provider} blocked", s.Provider);
+            return;
+        }
 
         IWeatherProvider provider = s.Provider switch
         {
@@ -132,6 +144,13 @@ public sealed class WeatherApiPollingService : IHostedService, IAsyncDisposable
         LastError = null;
         LastData  = data;
         LastFetchUtc = DateTime.UtcNow;
+
+        // Without license: no telemetry output
+        if (!IsLicensed)
+        {
+            _logger.LogInformation("WeatherApi: unlicensed – data fetched (simulation only) but not written to telemetry file");
+            return;
+        }
 
         await WriteJsonFileAsync(s, data, ct);
     }

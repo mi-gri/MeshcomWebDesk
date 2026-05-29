@@ -1018,7 +1018,7 @@
                 {
                     <div class="settings-notice" style="background:#2b1a0d;border-color:#e3b341;margin-bottom:0.75rem">
                         ⚠️ <strong>@Loc.T("Unregistrierte Testversion", "Unregistered trial version")</strong> –
-                        @Loc.T("Alle Funktionen aktiv. Bitte lizenzieren Sie diese Funktion mit Ihrem Rufzeichen.", "All features active. Please license this feature with your callsign.")
+                        @Loc.T("Nur Simulation verfügbar. Für echte Wetterdaten bitte einen Kaffee spenden ☕ und Lizenzschlüssel per E-Mail anfordern.", "Simulation only. For real weather data, please buy a coffee ☕ and request a license key by e-mail.")
                     </div>
                 }
             }
@@ -1067,9 +1067,27 @@
                         <input type="password" @bind="_model.WeatherApi.LicenseKey" autocomplete="new-password"
                                placeholder="@Loc.T("Lizenzschlüssel (base64.signature)", "License key (base64.signature)")"
                                style="flex:1;min-width:200px" />
-                        <a class="btn-add" style="text-decoration:none;white-space:nowrap"
-                           href="@($"mailto:meshcom@dh1fr.de?subject=WeatherAPI%20Lizenz%20{Uri.EscapeDataString(_model.MyCallsign ?? "")}&body=Rufzeichen%3A%20{Uri.EscapeDataString(_model.MyCallsign ?? "")}%0AProvider%3A%20{_model.WeatherApi.Provider}%0A%0ABitte%20sende%20mir%20einen%20Lizenzschl%C3%BCssel.")">
-                            ✉️ @Loc.T("Lizenz anfordern", "Request license")
+                        @{
+                            var _ssid = _model.MyCallsign?.Trim() ?? "";
+                            var _mailTo = $"mailto:meshcom@dh1fr.de?subject=WeatherAPI%20Lizenz%20{Uri.EscapeDataString(_ssid)}&body=Hallo%2C%0A%0Aich%20m%C3%B6chte%20einen%20Lizenzschl%C3%BCssel%20f%C3%BCr%20die%20Wetter-API-Funktion%20in%20MeshcomWebDesk%20anfordern.%0A%0ARufzeichen%20(inkl.%20SSID)%3A%20{Uri.EscapeDataString(_ssid)}%0AProvider%3A%20{_model.WeatherApi.Provider}%0A%0AIch%20habe%20einen%20Kaffee%20spendiert%20%E2%98%95%20(Transaktions-ID%2FScreenshot%20im%20Anhang).%0A%0AVielen%20Dank!";
+                        }
+                        @if (string.IsNullOrWhiteSpace(_ssid))
+                        {
+                            <div class="settings-error" style="margin-top:0;font-size:12px">⚠️ @Loc.T("Bitte zuerst das Rufzeichen (inkl. SSID) in den Allgemeinen Einstellungen eintragen!", "Please enter your callsign (incl. SSID) in General Settings first!")</div>
+                        }
+                        else
+                        {
+                            <a class="btn-add" style="text-decoration:none;white-space:nowrap" href="@_mailTo">
+                                ✉️ @Loc.T("Lizenz anfordern", "Request license")
+                            </a>
+                        }
+                        <a class="btn-add" style="text-decoration:none;white-space:nowrap;background:#f8c31b;color:#000;border-color:#f8c31b"
+                           href="https://www.buymeacoffee.com/dh1fr" target="_blank">
+                            ☕ Buy me a Coffee
+                        </a>
+                        <a class="btn-add" style="text-decoration:none;white-space:nowrap;background:#003087;color:#fff;border-color:#003087"
+                           href="https://paypal.me/DH1FR" target="_blank">
+                            💳 PayPal
                         </a>
                     </div>
                 }
