@@ -39,7 +39,6 @@ certs/*.pem
 installer/publish/
 installer/output/
 
-## License generation tools (private keys – NEVER commit!)
-tools/private/
-tools/private/*.key
-tools/private/*.pem
+## License generation tools (privat – NIEMALS committen!)
+## Gesamter tools/-Ordner bleibt lokal und wird nicht in Git aufgenommen.
+tools/
