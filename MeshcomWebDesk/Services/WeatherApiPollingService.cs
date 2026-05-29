@@ -76,22 +76,31 @@ public sealed class WeatherApiPollingService : IHostedService, IAsyncDisposable
 
     private async void OnTimer(object? state)
     {
-        var s = _settings.CurrentValue.WeatherApi;
-
-        if (s.Provider == WeatherProvider.None)
+        try
         {
-            ScheduleNext(TimeSpan.FromMinutes(5));
-            return;
+            var s = _settings.CurrentValue.WeatherApi;
+
+            if (s.Provider == WeatherProvider.None)
+            {
+                ScheduleNext(TimeSpan.FromMinutes(5));
+                return;
+            }
+
+            await PollAsync(s, CancellationToken.None);
+
+            // Without license: fixed 24h interval; with license: use configured interval (min. 5 min)
+            var interval = IsLicensed
+                ? TimeSpan.FromMinutes(Math.Max(MinInterval.TotalMinutes, s.PollIntervalMinutes))
+                : TimeSpan.FromHours(24);
+
+            ScheduleNext(interval);
         }
-
-        await PollAsync(s, CancellationToken.None);
-
-        // Without license: fixed 24h interval; with license: use configured interval (min. 5 min)
-        var interval = IsLicensed
-            ? TimeSpan.FromMinutes(Math.Max(MinInterval.TotalMinutes, s.PollIntervalMinutes))
-            : TimeSpan.FromHours(24);
-
-        ScheduleNext(interval);
+        catch (Exception ex)
+        {
+            LastError = $"Interner Fehler: {ex.Message}";
+            _logger.LogError(ex, "WeatherApiPollingService: unbehandelte Exception in OnTimer");
+            ScheduleNext(TimeSpan.FromMinutes(5));
+        }
     }
 
     private void ScheduleNext(TimeSpan delay)
