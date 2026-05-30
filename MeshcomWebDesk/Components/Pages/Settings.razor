@@ -2725,7 +2725,7 @@
             WeatherApi              = new MeshcomWebDesk.Models.WeatherApiSettings
             {
                 Provider           = s.WeatherApi.Provider,
-                ApiKey             = string.Empty, // never pre-fill – user must re-enter
+                ApiKey             = s.WeatherApi.ApiKey,
                 StationId          = s.WeatherApi.StationId,
                 PollIntervalMinutes= s.WeatherApi.PollIntervalMinutes,
                 LicenseKey         = s.WeatherApi.LicenseKey
