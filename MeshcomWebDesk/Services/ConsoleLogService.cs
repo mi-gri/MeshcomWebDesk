@@ -35,10 +35,7 @@ public class ConsoleLogService
     public async Task WriteAsync(string host, bool enabled, string line)
     {
         if (!enabled || string.IsNullOrWhiteSpace(host))
-        {
-            _logger.LogWarning("ConsoleLogService.WriteAsync: skipped – enabled={Enabled}, host='{Host}'", enabled, host);
             return;
-        }
 
         // Strip leading/trailing whitespace but keep the raw text
         var trimmed = line.Trim();

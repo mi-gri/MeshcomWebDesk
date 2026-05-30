@@ -360,6 +360,30 @@ h1:focus {
     gap: 4px;
 }
 
+/* ── Trennlinie "Neue Nachrichten" ─────────────────────────────────────── */
+.new-messages-divider {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 6px 0;
+    color: #58a6ff;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+
+.new-messages-divider::before,
+.new-messages-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, transparent, #58a6ff88);
+}
+
+.new-messages-divider::after {
+    background: linear-gradient(to left, transparent, #58a6ff88);
+}
+
 .message {
     padding: 6px 10px;
     border-radius: 6px;

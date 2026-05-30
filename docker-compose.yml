@@ -12,6 +12,7 @@
       - ./appsettings.json:/app/appsettings.json:ro   # config (read-only)
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
+      - DATAPROTECTION_KEYPATH=/app/keys
       - Meshcom__DeviceIp=192.168.1.60
       - Meshcom__DevicePort=1799
       - Meshcom__ListenPort=1799

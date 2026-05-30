@@ -144,8 +144,16 @@
             @if (_activeTab != null)
             {
                 <div class="message-list" id="tab-messages">
+                    @{ var msgIdx = 0; }
                     @foreach (var msg in _activeTabMessages)
                     {
+                        @if (_newMessagesFromIndex >= 0 && msgIdx == _newMessagesFromIndex)
+                        {
+                            <div class="new-messages-divider">
+                                <span>@Loc.T("Neue Nachrichten", "New Messages")</span>
+                            </div>
+                        }
+                        msgIdx++;
                         <div class="message @(msg.IsOutgoing ? (_settings.OwnMessagesAlignLeft ? "msg-out-left" : "msg-out") : "msg-in")">
                             <span class="msg-time">
                                 @{ var msgTs = LT(msg.Timestamp); var msgDate = TsDate(msgTs); }
@@ -176,7 +184,7 @@
                     }
                 </div>
 
-                <SendBar @ref="_sendBar" OnSend="HandleSendMessage" Callsign="@_activeTab.Key" />
+                <SendBar @key="@("sendbar")" @ref="_sendBar" OnSend="HandleSendMessage" Callsign="@_activeTab.Key" />
             }
             else
             {
@@ -828,6 +836,8 @@
     private readonly Dictionary<string, QrzInfo?> _qrzData = new(StringComparer.OrdinalIgnoreCase);
     private string _activeTabKey = string.Empty;
     private ChatTab? _activeTab;
+    /// <summary>Index of the first "new" message in _activeTabMessages. -1 = no divider.</summary>
+    private int _newMessagesFromIndex = -1;
     private string _newTabCallsign = string.Empty;
     private bool _showNewTabInput;
     private string _myCallsign = string.Empty;
@@ -1332,9 +1342,18 @@
 
     private void SelectTab(string key)
     {
+        // Reset divider for the previously active tab
+        _newMessagesFromIndex = -1;
+
         _activeTabKey = key;
         _activeTab = ChatService.GetTab(key, _activeNodeId);
         _activeTabMessages = ChatService.GetTabMessages(key, _activeNodeId);
+
+        // Show divider at the first unread message if there are unread messages
+        var unread = _activeTab?.UnreadCount ?? 0;
+        if (unread > 0 && _activeTabMessages.Count > 0)
+            _newMessagesFromIndex = Math.Max(0, _activeTabMessages.Count - unread);
+
         ChatService.ClearUnread(key, _activeNodeId);
         ChatService.SetActiveTabKey(_activeNodeId, key);
         _scrollMessages = true;

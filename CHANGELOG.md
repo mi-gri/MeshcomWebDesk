@@ -1,17 +1,30 @@
 ﻿# Changelog
 
-## [1.9.6] – in development (dev)
+## [1.11.0] – in development (dev)
 
 ### Features
-- **TLS Console / Serial Console**: The console page now supports either a TLS connection (previous behaviour) or direct USB serial access (115200 baud). Switch mode in **Settings → 🖥️ Console → Serial Console**.
-- **OTA update via console**: The command `--ota-update` starts OTA mode with a 5-second countdown dialog; the connection is automatically closed after the OTA page opens.
-- **Reboot via console**: The command `--reboot` shows a confirmation dialog; after sending, the connection is closed after a short delay.
-- **Beacon interval minimum**: The beacon interval can no longer be set below 8 hours; existing values < 8 h are automatically corrected to 8 h on load.
-- **Telemetry mapping limit**: A maximum of 3 telemetry mapping entries are allowed; the add button is disabled when the limit is reached.
-- **Docker – Serial interface**: Documentation added for passing through USB/TTY devices in `docker-compose.yml` (see README → *Serial Console (USB) in Docker*).
+- **Weather API (Wetter-API)**: Live Wetterdaten können als Telemetrie-Felder direkt in das Telemetrie-System eingespeist werden.
+  - **Provider**: AWEKAS (`https://api.awekas.at/current.php?key=...`) und Weather Underground (`api.weather.com/v2/pws/observations/current`) werden unterstützt.
+  - **Simulations-Provider**: Offline-Testbetrieb ohne API-Key via virtueller Wetterstation (Datei-basiert oder zufällige Testwerte).
+  - **Bot-Befehl `--weather`**: Zeigt Provider, letzten Messwert und Zeitstempel.
+  - **Einstellungen**: Eigener Bereich in den Einstellungen mit Provider-Auswahl, API-Key/Station-ID und Poll-Intervall.
+- **Neue Nachrichten – Trennlinie**: Im Chat-Tab wird eine sichtbare Trennlinie mit dem Text „Neue Nachrichten" / „New messages" eingefügt, sobald neue Nachrichten seit dem letzten Lesen eingehen (mehrsprachig: DE/EN).
+- **Spendenoptionen**: Neben PayPal wird jetzt auch **Buy Me a Coffee** als Spendenoption angeboten – in der About-Seite und im Willkommensdialog.
+- **TLS Console / Serial Console**: Die Konsolen-Seite unterstützt jetzt entweder eine TLS-Verbindung (bisheriges Verhalten) oder direkten USB-Seriell-Zugriff (115200 Baud). Umschaltbar unter **Einstellungen → 🖥️ Console → Serial Console**.
+- **OTA-Update über Konsole**: Der Befehl `--ota-update` startet den OTA-Modus mit einem 5-Sekunden-Countdown-Dialog; die Verbindung wird nach dem Öffnen der OTA-Seite automatisch getrennt.
+- **Neustart über Konsole**: Der Befehl `--reboot` zeigt einen Bestätigungsdialog; nach dem Senden wird die Verbindung mit kurzem Delay getrennt.
+- **Beacon-Intervall Minimum**: Das Beacon-Intervall kann nicht mehr unter 8 Stunden gesetzt werden; bestehende Werte < 8 h werden beim Laden automatisch auf 8 h korrigiert.
+- **Telemetrie-Mapping Limit**: Maximal 3 Telemetrie-Mapping-Einträge erlaubt; der Hinzufügen-Button wird deaktiviert, wenn das Limit erreicht ist.
+- **Docker – Serielles Interface**: Dokumentation für die Durchreichung von USB/TTY-Geräten in `docker-compose.yml` ergänzt (siehe README → *Serial Console (USB) in Docker*).
 
 ### Bugfixes
-- **Speaker icon**: The speaker icon in the status bar now persists across chat page reloads (state is stored like the bell icon).
+- **Weather API – AWEKAS API-Key URL-Kodierung**: AWEKAS zeigt den Key im Portal URL-kodiert an (`%2B`, `%2F`, `%3D`); wird jetzt automatisch via `Uri.UnescapeDataString` vor dem API-Aufruf dekodiert.
+- **Weather API – Einstellungen Speichern/Laden**: Der `WeatherApi`-Block fehlte in der Serialisierung von `SettingsService.cs`; Einstellungen wurden nicht persistiert. Behoben.
+- **Weather API – API-Key Entschlüsselung**: `WeatherApi.ApiKey` wurde beim Speichern verschlüsselt, beim Laden aber nicht entschlüsselt. `DecryptMeshcomSettingsPostConfigure` korrigiert.
+- **Doppelverschlüsselung verhindert**: `SettingsProtector.Encrypt` und `SettingsService.Encrypt` prüfen jetzt auf `aes:`/`dp:`-Prefix und verhindern eine doppelte Verschlüsselung bereits verschlüsselter Werte.
+- **API-Key-Feld nie vorausgefüllt**: Passwort- und Key-Felder in der Settings-UI werden beim Laden leer angezeigt; beim Speichern mit leerem Feld bleibt der bestehende verschlüsselte Wert in der Datei erhalten (`EncryptOrKeepExisting`).
+- **Build überschreibt Runtime-Daten nicht mehr**: `data/**` wurde bisher bei jedem Build nach `bin/Debug/net10.0/` kopiert und überschrieb die zur Laufzeit gespeicherten Einstellungen; jetzt `CopyToOutputDirectory=Never`.
+- **Lautsprecher-Icon**: Das Lautsprecher-Icon in der Statusleiste bleibt nach einem Chat-Seiten-Reload erhalten (Zustand wird wie das Glocken-Icon gespeichert).
 
 ---
 

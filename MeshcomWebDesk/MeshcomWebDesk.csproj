@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -7,9 +7,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
-    <AssemblyVersion>1.10.3.0</AssemblyVersion>
-    <FileVersion>1.10.3.0</FileVersion>
-    <InformationalVersion>1.10.3</InformationalVersion>
+    <AssemblyVersion>1.11.0.0</AssemblyVersion>
+    <FileVersion>1.11.0.0</FileVersion>
+    <InformationalVersion>1.11.0</InformationalVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -29,4 +29,17 @@
     </AssemblyAttribute>
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Runtime-generated files must NOT be copied to the output directory.
+         appsettings.override.json is written by SettingsService at runtime and must
+         never be overwritten by a build. -->
+    <None Update="data\appsettings.override.json">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
+    <None Update="data\**\*">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
+
