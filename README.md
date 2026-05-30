@@ -348,12 +348,8 @@ This is particularly useful when the node is **not physically accessible** via U
   - **Simulation** – generates realistic test data without any API key or network access (always available)
 - **Configurable fields**: temperature (in/out), humidity (in/out), pressure (rel/abs), wind speed/gust/direction, rain rate/daily total, UV index, solar radiation, dew point
 - **Telemetry integration**: field names (`temp_out`, `humidity_out`, `pressure_rel`, …) can be used directly as JSON-Key in the Telemetry Mapping
-- **Bot command** `--weather`: reports provider, last received values, license status and timestamp
-- **License model**: real provider access requires a personal license key tied to the station callsign incl. SSID
-  - Without a valid license: only simulation mode; poll interval fixed at **24 hours**; no telemetry output
-  - License keys are issued upon a ☕ coffee donation (Buy me a Coffee / PayPal)
-  - License request button in Settings pre-fills an e-mail with callsign and provider
-- **Poll interval**: configurable 5–60 minutes (licensed); fixed 24 h (unlicensed)
+- **Bot command** `--weather`: reports provider, last received values and timestamp
+- **Poll interval**: configurable 5–60 minutes
 - **Upload format for AWEKAS virtual station**: `http://ws.awekas.at/weatherstation/updateweatherstation.php?ID=<id>&PASSWORD=<pw>&dateutc=now&tempf=<F>&humidity=<pct>&baromin=<inHg>&windspeedmph=<mph>&windgustmph=<mph>&winddir=<deg>&rainin=0.0&dailyrainin=0.0&softwaretype=custom&action=updateraw`
 
 ### 📝 Logging (Serilog)
@@ -1370,25 +1366,23 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
  ## 📋 Changelog
 
 ### v1.11.0
-- **feat:** 🌤️ **Weather API (Wetter-API)** – Live-Wetterdaten von externen Providern als Telemetrie-Felder nutzbar
-  - **AWEKAS** (`https://api.awekas.at/current.php?key=...`) und **Weather Underground** unterstützt
-  - **Simulations-Provider**: Offline-Testbetrieb ohne API-Key (Datei-basiert oder Zufallswerte)
-  - **Lizenzmodell**: Ohne Lizenz nur Simulation verfügbar (Poll-Intervall 24 h, kein Telemetrie-Schreiben); mit Lizenz voller Betrieb
-  - **Lizenz-Anforderung**: Per E-Mail-Button mit vorausgefülltem Rufzeichen inkl. SSID
-  - **Bot-Befehl `--weather`**: Zeigt Provider, letzten Messwert, Lizenz- und Registrierungsstatus
-  - **Einstellungen**: Eigener Bereich mit Provider-Auswahl, API-Key/Station-ID, Poll-Intervall und Lizenz-Eingabe
-- **feat:** 💬 **Neue Nachrichten – Trennlinie** – Sichtbare Trennlinie „Neue Nachrichten / New messages" im Chat-Tab (DE/EN)
-- **feat:** ☕ **Buy Me a Coffee** – Zusätzlich zu PayPal als Spendenoption in About, Willkommensdialog und Weather-API-Lizenzbereich
-- **feat:** 🖥️ **Serial Console** – Konsolen-Seite unterstützt TLS-Verbindung oder direkten USB-Seriell-Zugriff (115200 Baud); umschaltbar in Einstellungen
-- **feat:** ♻️ **OTA-Update über Konsole** – Befehl `--ota-update` mit 5-Sekunden-Countdown-Dialog
-- **feat:** 🔄 **Neustart über Konsole** – Befehl `--reboot` mit Bestätigungsdialog
-- **fix:** 🌤️ **AWEKAS API-Key URL-Kodierung** – AWEKAS zeigt den Key im Portal URL-kodiert an; wird jetzt automatisch dekodiert
-- **fix:** 🌤️ **Weather API – Einstellungen Persistenz** – `WeatherApi`-Block fehlte in der Serialisierung; Einstellungen wurden nicht gespeichert
-- **fix:** 🌤️ **Weather API – API-Key Entschlüsselung** – Key wurde verschlüsselt, aber beim Laden nicht entschlüsselt; `DecryptMeshcomSettingsPostConfigure` korrigiert
-- **fix:** 🔐 **Doppelverschlüsselung verhindert** – `aes:`/`dp:`-Prefix wird erkannt; bereits verschlüsselte Werte werden nicht nochmals verschlüsselt
-- **fix:** 🔐 **API-Key-Feld leer beim Laden** – Passwort-/Key-Felder werden nie vorausgefüllt; beim Speichern mit leerem Feld bleibt der bestehende Wert erhalten
-- **fix:** 🔧 **Build überschreibt Runtime-Daten nicht mehr** – `data/**` wird nicht mehr bei Build nach `bin/Debug` kopiert
-- **fix:** 🔊 **Lautsprecher-Icon** – Zustand nach Chat-Seiten-Reload erhalten
+- **feat:** 🌤️ **Weather API** – Live weather data from external providers usable as telemetry fields
+  - **AWEKAS** (`https://api.awekas.at/current.php?key=...`) and **Weather Underground** supported
+  - **Simulation provider**: offline test mode without API key (file-based or random values)
+  - **Bot command `--weather`**: shows provider, latest measurement and timestamp
+  - **Settings**: dedicated section with provider selection, API key/station ID and poll interval
+- **feat:** 💬 **New messages divider** – visible divider line "New messages" in the chat tab when new messages arrive since last read (DE/EN)
+- **feat:** ☕ **Buy Me a Coffee** – added as donation option alongside PayPal in About and welcome dialog
+- **feat:** 🖥️ **Serial Console** – console page supports TLS connection or direct USB serial access (115200 baud); switchable in settings
+- **feat:** ♻️ **OTA update via console** – command `--ota-update` with 5-second countdown dialog
+- **feat:** 🔄 **Reboot via console** – command `--reboot` with confirmation dialog
+- **fix:** 🌤️ **AWEKAS API key URL encoding** – AWEKAS displays the key URL-encoded in the portal; now automatically decoded before the API call
+- **fix:** 🌤️ **Weather API – settings persistence** – `WeatherApi` block was missing from serialization; settings were not saved
+- **fix:** 🌤️ **Weather API – API key decryption** – key was encrypted on save but not decrypted on load; `DecryptMeshcomSettingsPostConfigure` corrected
+- **fix:** 🔐 **Double encryption prevented** – `aes:`/`dp:` prefix is detected; already encrypted values are not encrypted again
+- **fix:** 🔐 **API key field empty on load** – password/key fields are never pre-filled; saving with an empty field preserves the existing encrypted value
+- **fix:** 🔧 **Build no longer overwrites runtime data** – `data/**` is no longer copied to `bin/Debug` during build
+- **fix:** 🔊 **Speaker icon** – state preserved after chat page reload
 
 ### v1.10.4 *(in development)*
 

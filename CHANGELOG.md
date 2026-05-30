@@ -6,12 +6,10 @@
 - **Weather API (Wetter-API)**: Live Wetterdaten können als Telemetrie-Felder direkt in das Telemetrie-System eingespeist werden.
   - **Provider**: AWEKAS (`https://api.awekas.at/current.php?key=...`) und Weather Underground (`api.weather.com/v2/pws/observations/current`) werden unterstützt.
   - **Simulations-Provider**: Offline-Testbetrieb ohne API-Key via virtueller Wetterstation (Datei-basiert oder zufällige Testwerte).
-  - **Lizenzmodell**: Ohne Lizenz nur Simulations-Provider verfügbar; Poll-Intervall auf 24 h gesetzt; kein Telemetrie-Schreiben. Mit gültigem Lizenzschlüssel voller Betrieb beider Provider.
-  - **Lizenz-Anforderung**: Direkt per E-Mail-Button mit vorausgefülltem Rufzeichen inkl. SSID (Rufzeichen ist Pflichtfeld).
-  - **Bot-Befehl `--weather`**: Zeigt Provider, letzten Messwert, Lizenz- und Registrierungsstatus.
-  - **Einstellungen**: Eigener Bereich in den Einstellungen mit Provider-Auswahl, API-Key/Station-ID, Poll-Intervall und Lizenz-Eingabe.
+  - **Bot-Befehl `--weather`**: Zeigt Provider, letzten Messwert und Zeitstempel.
+  - **Einstellungen**: Eigener Bereich in den Einstellungen mit Provider-Auswahl, API-Key/Station-ID und Poll-Intervall.
 - **Neue Nachrichten – Trennlinie**: Im Chat-Tab wird eine sichtbare Trennlinie mit dem Text „Neue Nachrichten" / „New messages" eingefügt, sobald neue Nachrichten seit dem letzten Lesen eingehen (mehrsprachig: DE/EN).
-- **Spendenoptionen**: Neben PayPal wird jetzt auch **Buy Me a Coffee** als Spendenoption angeboten – in der About-Seite, im Willkommensdialog und im Weather-API-Lizenzbereich.
+- **Spendenoptionen**: Neben PayPal wird jetzt auch **Buy Me a Coffee** als Spendenoption angeboten – in der About-Seite und im Willkommensdialog.
 - **TLS Console / Serial Console**: Die Konsolen-Seite unterstützt jetzt entweder eine TLS-Verbindung (bisheriges Verhalten) oder direkten USB-Seriell-Zugriff (115200 Baud). Umschaltbar unter **Einstellungen → 🖥️ Console → Serial Console**.
 - **OTA-Update über Konsole**: Der Befehl `--ota-update` startet den OTA-Modus mit einem 5-Sekunden-Countdown-Dialog; die Verbindung wird nach dem Öffnen der OTA-Seite automatisch getrennt.
 - **Neustart über Konsole**: Der Befehl `--reboot` zeigt einen Bestätigungsdialog; nach dem Senden wird die Verbindung mit kurzem Delay getrennt.
