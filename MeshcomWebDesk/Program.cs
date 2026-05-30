@@ -195,6 +195,10 @@ app.MapPost("/api/telemetry", async (
     if (!s.TelemetryApiEnabled)
         return Results.NotFound();
 
+    // Option 1: Weather API und HTTP-API schließen sich gegenseitig aus
+    if (s.WeatherApi?.Provider != MeshcomWebDesk.Models.WeatherProvider.None)
+        return Results.Conflict(new { error = "HTTP-Telemetrie-API ist deaktiviert, solange die Wetter-API aktiv ist." });
+
     if (!string.IsNullOrWhiteSpace(s.TelemetryApiKey))
     {
         if (!ctx.Request.Headers.TryGetValue("X-Api-Key", out var providedKey)

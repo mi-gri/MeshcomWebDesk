@@ -857,9 +857,17 @@
 
                 <label>@Loc.T("HTTP-API aktiv", "HTTP-API Active")</label>
                 <label class="settings-toggle">
-                    <input type="checkbox" @bind="_model.TelemetryApiEnabled" />
+                    <input type="checkbox" @bind="_model.TelemetryApiEnabled"
+                           disabled="@(_model.WeatherApi.Provider != MeshcomWebDesk.Models.WeatherProvider.None)" />
                     <span>@(_model.TelemetryApiEnabled ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
                 </label>
+                @if (_model.WeatherApi.Provider != MeshcomWebDesk.Models.WeatherProvider.None)
+                {
+                    <div style="grid-column:1/-1;font-size:.8rem;color:#f0a030;margin-top:.2rem">
+                        ⚠️ @Loc.T("HTTP-API ist deaktiviert, solange die Wetter-API aktiv ist (gleiche Telemetrie-Datei).",
+                                  "HTTP-API is disabled while Weather API is active (same telemetry file).")
+                    </div>
+                }
 
                 <label>
                     API-Key<br />
@@ -889,30 +897,7 @@
                             var e = entry;
                             <tr @key="e">
                                 <td>
-                                    @if (_model.WeatherApi.Provider != MeshcomWebDesk.Models.WeatherProvider.None)
-                                    {
-                                        <select @bind="e.JsonKey" title="@Loc.T("Wetter-API Feld wählen oder direkt eingeben", "Select Weather API field or type manually")">
-                                            <option value="">– @Loc.T("Feld wählen", "Select field") –</option>
-                                            <option value="temp_out">temp_out (@Loc.T("Außentemperatur", "Outdoor temp."))</option>
-                                            <option value="temp_in">temp_in (@Loc.T("Innentemperatur", "Indoor temp."))</option>
-                                            <option value="humidity_out">humidity_out (@Loc.T("Außenfeuchte", "Outdoor humidity"))</option>
-                                            <option value="humidity_in">humidity_in (@Loc.T("Innenfeuchte", "Indoor humidity"))</option>
-                                            <option value="pressure_rel">pressure_rel (@Loc.T("Luftdruck relativ", "Pressure relative"))</option>
-                                            <option value="pressure_abs">pressure_abs (@Loc.T("Luftdruck absolut", "Pressure absolute"))</option>
-                                            <option value="wind_speed">wind_speed (@Loc.T("Windgeschwindigkeit", "Wind speed"))</option>
-                                            <option value="wind_gust">wind_gust (@Loc.T("Böen", "Wind gust"))</option>
-                                            <option value="wind_dir">wind_dir (@Loc.T("Windrichtung", "Wind direction"))</option>
-                                            <option value="rain_rate">rain_rate (@Loc.T("Regenrate", "Rain rate"))</option>
-                                            <option value="rain_day">rain_day (@Loc.T("Regen heute", "Rain today"))</option>
-                                            <option value="uv">uv (UV-Index)</option>
-                                            <option value="solar_rad">solar_rad (@Loc.T("Sonnenstrahlung W/m²", "Solar radiation W/m²"))</option>
-                                            <option value="dew_point">dew_point (@Loc.T("Taupunkt", "Dew point"))</option>
-                                        </select>
-                                    }
-                                    else
-                                    {
-                                        <input type="text" @bind="e.JsonKey" />
-                                    }
+                                    <input type="text" @bind="e.JsonKey" />
                                 </td>
                                 <td><input type="text" @bind="e.Label" /></td>
                                 <td><input type="text" @bind="e.Unit" /></td>
@@ -1025,7 +1010,14 @@
 
             <div class="settings-grid">
                 <label>@Loc.T("Provider", "Provider")</label>
-                <select @bind="_model.WeatherApi.Provider">
+                @if (_model.TelemetryApiEnabled)
+                {
+                    <div style="color:#f0a030;font-size:.8rem">
+                        ⚠️ @Loc.T("Wetter-API nicht verfügbar, solange HTTP-API aktiv ist (gleiche Telemetrie-Datei). Bitte HTTP-API zuerst deaktivieren.",
+                                  "Weather API not available while HTTP-API is active (same telemetry file). Please disable HTTP-API first.")
+                    </div>
+                }
+                <select @bind="_model.WeatherApi.Provider" disabled="@_model.TelemetryApiEnabled">
                     <option value="@MeshcomWebDesk.Models.WeatherProvider.None">@Loc.T("Deaktiviert", "Disabled")</option>
                     <option value="@MeshcomWebDesk.Models.WeatherProvider.Awekas">AWEKAS</option>
                     <option value="@MeshcomWebDesk.Models.WeatherProvider.WUnderground">Weather Underground</option>
