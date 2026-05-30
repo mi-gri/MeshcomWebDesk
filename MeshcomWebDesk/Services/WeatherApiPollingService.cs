@@ -191,11 +191,13 @@ public sealed class WeatherApiPollingService : IHostedService, IAsyncDisposable
         output["_observed"]  = data.ObservedUtc.ToString("yyyy-MM-ddTHH:mm:ssZ");
         output["_licensed"]  = IsLicensed;
 
+        var json = JsonSerializer.Serialize(output, new JsonSerializerOptions { WriteIndented = true });
+
         var dir = Path.GetDirectoryName(mainSettings.TelemetryFilePath);
         if (!string.IsNullOrWhiteSpace(dir))
             Directory.CreateDirectory(dir);
 
-        await TelemetryFileHelper.MergeAndWriteAsync(mainSettings.TelemetryFilePath, output, ct);
+        await File.WriteAllTextAsync(mainSettings.TelemetryFilePath, json, System.Text.Encoding.UTF8, ct);
 
         _logger.LogInformation("WeatherApi: wrote {Count} fields to {Path} (licensed={Licensed})",
             data.Fields.Count, mainSettings.TelemetryFilePath, IsLicensed);
