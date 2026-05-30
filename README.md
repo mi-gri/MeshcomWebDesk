@@ -1365,6 +1365,8 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 
  ## 📋 Changelog
 
+### v1.11.1 *(in development)*
+
 ### v1.11.0
 - **feat:** 🌤️ **Weather API** – Live weather data from external providers usable as telemetry fields
   - **AWEKAS** (`https://api.awekas.at/current.php?key=...`) and **Weather Underground** supported
