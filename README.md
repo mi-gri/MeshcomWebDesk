@@ -29,6 +29,31 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 
 ---
 
+## 🆕 What's New in v1.11.0
+
+> 📄 [Full release notes](docs/release-notes/v1.11.0.md)
+
+### 🌤️ Weather API
+Live weather data from **AWEKAS** or **Weather Underground** can now be fed directly into the telemetry JSON file and transmitted as telemetry fields via MeshCom.
+
+- Configure provider, station ID and API key under **Settings → 🌤️ Weather API**
+- Configurable poll interval (min. 5 minutes)
+- **Simulation provider** for offline testing (no API key required)
+- Fixed field names (`temp_out`, `humidity_out`, `pressure_rel`, …) map directly to the **Telemetry Mapping**
+- Bot command `--weather` reports provider, latest values and timestamp
+- Mutual exclusion with HTTP Telemetry API (same telemetry file)
+
+### 🖥️ NET Console – no-password support
+The NET Console now connects successfully even when **no password is set** on the MeshCom node.
+
+### 🔐 Bugfixes
+- AWEKAS API key URL-encoding automatically resolved
+- Weather API settings persistence and decryption corrected
+- Double encryption and empty key-field overwrite prevented
+- Build no longer overwrites runtime data files
+
+---
+
 <p align="center">
   <strong>☕ Do you like my work? Then buy me a coffee! ☕</strong><br><br>
   <a href="https://paypal.me/DH1FR">
