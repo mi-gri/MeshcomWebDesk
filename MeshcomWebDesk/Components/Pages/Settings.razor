@@ -857,8 +857,8 @@
 
                 <label>@Loc.T("HTTP-API aktiv", "HTTP-API Active")</label>
                 <label class="settings-toggle">
-                    <input type="checkbox" @bind="_model.TelemetryApiEnabled"
-                           disabled="@(_model.WeatherApi.Provider != MeshcomWebDesk.Models.WeatherProvider.None)" />
+                    <input type="checkbox" checked="@_model.TelemetryApiEnabled" disabled="@(_model.WeatherApi.Provider != MeshcomWebDesk.Models.WeatherProvider.None)"
+                           @onchange="e => { _model.TelemetryApiEnabled = (bool)e.Value!; if (_model.TelemetryApiEnabled) _model.WeatherApi.Provider = MeshcomWebDesk.Models.WeatherProvider.None; }" />
                     <span>@(_model.TelemetryApiEnabled ? Loc.T("Aktiv", "Active") : Loc.T("Inaktiv", "Inactive"))</span>
                 </label>
                 @if (_model.WeatherApi.Provider != MeshcomWebDesk.Models.WeatherProvider.None)
@@ -1001,7 +1001,8 @@
                                   "Weather API not available while HTTP-API is active (same telemetry file). Please disable HTTP-API first.")
                     </div>
                 }
-                <select @bind="_model.WeatherApi.Provider" disabled="@_model.TelemetryApiEnabled">
+                <select value="@_model.WeatherApi.Provider" disabled="@_model.TelemetryApiEnabled"
+                        @onchange="e => { _model.WeatherApi.Provider = Enum.Parse<MeshcomWebDesk.Models.WeatherProvider>(e.Value!.ToString()!); if (_model.WeatherApi.Provider != MeshcomWebDesk.Models.WeatherProvider.None) _model.TelemetryApiEnabled = false; }">
                     <option value="@MeshcomWebDesk.Models.WeatherProvider.None">@Loc.T("Deaktiviert", "Disabled")</option>
                     <option value="@MeshcomWebDesk.Models.WeatherProvider.Awekas">AWEKAS</option>
                     <option value="@MeshcomWebDesk.Models.WeatherProvider.WUnderground">Weather Underground</option>
@@ -3400,7 +3401,7 @@
             TelemetryGroup         = TelemetryGroup,
             TelemetryScheduleHours = TelemetryScheduleHours,
             TelemetryMapping       = TelemetryMapping.ToList(),
-            TelemetryApiEnabled    = TelemetryApiEnabled,
+            TelemetryApiEnabled    = TelemetryApiEnabled && WeatherApi.Provider == MeshcomWebDesk.Models.WeatherProvider.None,
             TelemetryApiKey        = TelemetryApiKey,
             Language               = Language,
             Database               = ToDbSettings(),
