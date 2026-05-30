@@ -68,8 +68,20 @@ public class HmacConsoleService : IConsoleService, IAsyncDisposable
             _reader = new StreamReader(stream, new UTF8Encoding(false), leaveOpen: true);
             _writer = new StreamWriter(stream, new UTF8Encoding(false), leaveOpen: true) { AutoFlush = true, NewLine = "\r\n" };
 
-            // ── Schritt 2: NONCE lesen ────────────────────────────────────────
+            // ── Schritt 2: NONCE oder direktes OK lesen ──────────────────────
             var nonceLine = await _reader.ReadLineAsync(_cts.Token);
+
+            // Server ohne Passwort-Schutz antwortet sofort mit "OK" (kein HMAC nötig)
+            if (string.Equals(nonceLine?.Trim(), "OK", StringComparison.OrdinalIgnoreCase))
+            {
+                IsConnected = true;
+                ConnectedHost = host;
+                AppendLine($"● Verbunden mit {host}:{port} (NET Console, keine Authentifizierung)");
+                OnChange?.Invoke();
+                _ = Task.Run(() => ReadLoopAsync(_cts.Token));
+                return;
+            }
+
             if (string.IsNullOrEmpty(nonceLine) || !nonceLine.StartsWith("NONCE:", StringComparison.OrdinalIgnoreCase))
             {
                 AppendLine($"✗ Unerwartete Server-Antwort: {nonceLine}");
