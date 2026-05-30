@@ -220,7 +220,7 @@ app.MapPost("/api/telemetry", async (
     if (!string.IsNullOrWhiteSpace(dir))
         Directory.CreateDirectory(dir);
 
-    await File.WriteAllTextAsync(s.TelemetryFilePath, body, System.Text.Encoding.UTF8);
+    await MeshcomWebDesk.Services.TelemetryFileHelper.MergeAndWriteAsync(s.TelemetryFilePath, body);
     logger.LogInformation("Telemetry received via HTTP POST from {Remote} → {Path}",
         ctx.Connection.RemoteIpAddress, s.TelemetryFilePath);
 
