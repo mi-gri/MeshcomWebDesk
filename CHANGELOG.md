@@ -1,6 +1,14 @@
 ﻿# Changelog
 
-## [1.11.0] – in development (dev)
+## [1.11.1] – in development (dev)
+
+### Features
+
+### Bugfixes
+
+---
+
+## [1.11.0] – released
 
 ### Features
 - **Weather API (Wetter-API)**: Live Wetterdaten können als Telemetrie-Felder direkt in das Telemetrie-System eingespeist werden.
