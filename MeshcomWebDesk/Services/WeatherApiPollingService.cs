@@ -88,10 +88,8 @@ public sealed class WeatherApiPollingService : IHostedService, IAsyncDisposable
 
             await PollAsync(s, CancellationToken.None);
 
-            // Without license: fixed 24h interval; with license: use configured interval (min. 5 min)
-            var interval = IsLicensed
-                ? TimeSpan.FromMinutes(Math.Max(MinInterval.TotalMinutes, s.PollIntervalMinutes))
-                : TimeSpan.FromHours(24);
+            // Lizenzprüfung deaktiviert – konfiguriertes Intervall wird immer verwendet
+                var interval = TimeSpan.FromMinutes(Math.Max(MinInterval.TotalMinutes, s.PollIntervalMinutes));
 
             ScheduleNext(interval);
         }
@@ -110,16 +108,8 @@ public sealed class WeatherApiPollingService : IHostedService, IAsyncDisposable
 
     internal async Task PollAsync(WeatherApiSettings s, CancellationToken ct)
     {
-        // Validate license – real providers and telemetry output require a valid license
-        IsLicensed = _licenseService.IsLicensed(s.LicenseKey);
-
-        // Without a valid license only Simulation is allowed
-        if (!IsLicensed && s.Provider is WeatherProvider.Awekas or WeatherProvider.WUnderground)
-        {
-            LastError = "⚠️ Keine gültige Lizenz – echter API-Abruf gesperrt. Nur Simulation verfügbar.";
-            _logger.LogWarning("WeatherApi: unlicensed, provider {Provider} blocked", s.Provider);
-            return;
-        }
+        // Lizenzprüfung deaktiviert – alle Provider sind freigegeben
+        IsLicensed = true;
 
         IWeatherProvider provider = s.Provider switch
         {
@@ -154,13 +144,6 @@ public sealed class WeatherApiPollingService : IHostedService, IAsyncDisposable
         LastData  = data;
         LastFetchUtc = DateTime.UtcNow;
 
-        // Without license: no telemetry output
-        if (!IsLicensed)
-        {
-            _logger.LogInformation("WeatherApi: unlicensed – data fetched (simulation only) but not written to telemetry file");
-            return;
-        }
-
         await WriteJsonFileAsync(s, data, ct);
     }
 
@@ -189,7 +172,6 @@ public sealed class WeatherApiPollingService : IHostedService, IAsyncDisposable
         // Metadata fields (prefixed with _ so they don't clash with weather fields)
         output["_provider"]  = data.ProviderName;
         output["_observed"]  = data.ObservedUtc.ToString("yyyy-MM-ddTHH:mm:ssZ");
-        output["_licensed"]  = IsLicensed;
 
         var json = JsonSerializer.Serialize(output, new JsonSerializerOptions { WriteIndented = true });
 
@@ -199,7 +181,7 @@ public sealed class WeatherApiPollingService : IHostedService, IAsyncDisposable
 
         await File.WriteAllTextAsync(mainSettings.TelemetryFilePath, json, System.Text.Encoding.UTF8, ct);
 
-        _logger.LogInformation("WeatherApi: wrote {Count} fields to {Path} (licensed={Licensed})",
-            data.Fields.Count, mainSettings.TelemetryFilePath, IsLicensed);
+        _logger.LogInformation("WeatherApi: wrote {Count} fields to {Path}",
+            data.Fields.Count, mainSettings.TelemetryFilePath);
     }
 }
