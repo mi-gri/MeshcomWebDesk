@@ -116,7 +116,7 @@
     {
         _pinned = false;
         if (!_loaded) LoadData();
-        try { await JS.InvokeVoidAsync("positionCallsignPopup", _wrapRef, _cts.Token); }
+        try { await JS.InvokeVoidAsync("positionCallsignPopup", _cts.Token, _wrapRef); }
         catch (Exception ex) when (ex is JSDisconnectedException or TaskCanceledException or ObjectDisposedException) { }
     }
 
@@ -133,7 +133,7 @@
             if (!_loaded) LoadData();
             if (_pinned)
             {
-                try { await JS.InvokeVoidAsync("positionCallsignPopup", _wrapRef, _cts.Token); }
+                try { await JS.InvokeVoidAsync("positionCallsignPopup", _cts.Token, _wrapRef); }
                 catch (Exception ex) when (ex is JSDisconnectedException or TaskCanceledException or ObjectDisposedException) { }
             }
         }
