@@ -130,6 +130,7 @@ builder.Services.AddSingleton<TelnetService>();
 builder.Services.AddSingleton<SerialConsoleService>();
 builder.Services.AddSingleton<HmacConsoleService>();
 builder.Services.AddSingleton<ConsoleLogService>();
+builder.Services.AddSingleton<ConsoleCommandHelperService>();
 builder.Services.AddHttpClient("MeshcomGateway").ConfigurePrimaryHttpMessageHandler(
     () => new HttpClientHandler { AllowAutoRedirect = true });
 builder.Services.AddHttpClient("WeatherApi").ConfigurePrimaryHttpMessageHandler(
