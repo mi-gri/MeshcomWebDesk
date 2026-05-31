@@ -579,3 +579,40 @@ window.scrollElementToBottom = function (elementId) {
     var el = document.getElementById(elementId);
     if (el) el.scrollTop = el.scrollHeight;
 };
+
+// ── CallsignPopup: Popup am Viewport-Rand ausrichten ─────────────────────
+// Wird beim Anzeigen des Popups aufgerufen um sicherzustellen,
+// dass es nicht außerhalb des sichtbaren Bereichs erscheint.
+window.positionCallsignPopup = function (wrapEl) {
+    if (!wrapEl) return;
+    var card = wrapEl.querySelector('.cs-popup-card');
+    if (!card) return;
+
+    // Reset zu Standard (links-ausgerichtet)
+    card.style.left   = '';
+    card.style.right  = '';
+    card.style.top    = '';
+    card.style.bottom = '';
+
+    var rect      = card.getBoundingClientRect();
+    var vw        = window.innerWidth  || document.documentElement.clientWidth;
+    var vh        = window.innerHeight || document.documentElement.clientHeight;
+    var margin    = 6;
+
+    // Horizontal: überläuft rechts?
+    if (rect.right > vw - margin) {
+        card.style.left  = 'auto';
+        card.style.right = '0';
+    }
+    // Horizontal: überläuft links? (z.B. beim Pinnen)
+    if (rect.left < margin) {
+        card.style.left  = '0';
+        card.style.right = 'auto';
+    }
+
+    // Vertikal: überläuft unten?
+    if (rect.bottom > vh - margin) {
+        card.style.top    = 'auto';
+        card.style.bottom = '100%';
+    }
+};

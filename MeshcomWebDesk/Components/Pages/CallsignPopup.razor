@@ -1,0 +1,160 @@
+@using MeshcomWebDesk.Models
+@using MeshcomWebDesk.Services
+@using MeshcomWebDesk.Helpers
+@using Microsoft.Extensions.Options
+@inject QrzService QrzService
+@inject ChatService ChatService
+@inject IOptionsMonitor<MeshcomSettings> SettingsOptions
+@inject LanguageService Loc
+@inject IJSRuntime JS
+
+@*
+    Reusable callsign hover popup component.
+    Shows a floating card on hover with QRZ info, QRZ.com link, aprs.fi link
+    and station data (RSSI, battery, GPS) if available from the MH list.
+
+    Usage:
+      <CallsignPopup Callsign="@someCallsign" OnOpenChat="HandleOpenChat" />
+*@
+
+<span @ref="_wrapRef" class="cs-popup-wrap @(_pinned ? "cs-popup-pinned" : "")"
+      @onmouseenter="OnMouseEnter"
+      @onmouseleave="OnMouseLeave">
+
+    <span class="cs-popup-label" @onclick="OnLabelClick">@Callsign@if (_firstName is not null){<span class="qrz-badge"> · @_firstName</span>}</span>
+
+    <div class="cs-popup-card">
+        <div class="mh-sc-header">
+            <span class="mh-sc-call">@Callsign</span>
+        </div>
+
+        @if (_qrzInfo is not null)
+        {
+            <div class="mh-sc-qrz">
+                @if (!string.IsNullOrEmpty(_qrzInfo.FirstName)) { <span>@_qrzInfo.FirstName</span> }
+                @if (!string.IsNullOrEmpty(_qrzInfo.Location))  { <span class="mh-sc-loc">@_qrzInfo.Location</span> }
+            </div>
+        }
+
+        @if (_station is not null)
+        {
+            <div class="mh-sc-grid">
+                @if (_station.LastRssi.HasValue)
+                {
+                    <span class="mh-sc-lbl">RSSI</span>
+                    <span>@_station.LastRssi dBm</span>
+                }
+                @if (_station.LastSnr.HasValue)
+                {
+                    <span class="mh-sc-lbl">SNR</span>
+                    <span>@($"{_station.LastSnr:F1}") dB</span>
+                }
+                @if (_station.Battery.HasValue)
+                {
+                    <span class="mh-sc-lbl">🔋</span>
+                    <span>@_station.Battery%</span>
+                }
+                @if (_station.Latitude.HasValue && _station.Longitude.HasValue)
+                {
+                    <span class="mh-sc-lbl">QTH</span>
+                    <span style="font-family:monospace">@GeoHelper.ToMaidenhead(_station.Latitude.Value, _station.Longitude.Value)</span>
+                }
+            </div>
+        }
+
+        <div class="mh-sc-actions" style="flex-wrap:wrap">
+            @if (OnOpenChat.HasDelegate)
+            {
+                <button class="mh-sc-btn mh-sc-btn-chat"
+                        @onclick="HandleOpenChat"
+                        @onclick:stopPropagation="true">
+                    💬 @Loc.T("Chat öffnen", "Open Chat")
+                </button>
+            }
+            <a class="mh-sc-btn mh-sc-btn-aprs"
+               href="https://www.qrz.com/db/@Uri.EscapeDataString(BaseCallsign)"
+               target="_blank" rel="noopener"
+               @onclick:stopPropagation="true">
+                🔗 QRZ.com
+            </a>
+            <a class="mh-sc-btn mh-sc-btn-aprs"
+               href="https://aprs.fi/#!call=a/@Uri.EscapeDataString(Callsign)"
+               target="_blank" rel="noopener"
+               @onclick:stopPropagation="true">
+                🔗 aprs.fi
+            </a>
+        </div>
+    </div>
+</span>
+
+@code {
+    [Parameter, EditorRequired] public string Callsign { get; set; } = string.Empty;
+
+    /// <summary>Optional: callback when the user clicks "Chat öffnen". If not set, button is hidden.</summary>
+    [Parameter] public EventCallback<string> OnOpenChat { get; set; }
+
+    /// <summary>If true, the label click toggles pin (like MH list). Default: false (click = open chat).</summary>
+    [Parameter] public bool PinOnClick { get; set; } = false;
+
+    /// <summary>Rufzeichen ohne SSID (z.B. "OE3XYZ" aus "OE3XYZ-7") für QRZ.com-Suche.</summary>
+    private string BaseCallsign => Callsign.Contains('-')
+        ? Callsign[..Callsign.IndexOf('-')]
+        : Callsign;
+
+    private QrzInfo?     _qrzInfo;
+    private string?      _firstName;
+    private HeardStation? _station;
+    private bool         _pinned;
+    private bool         _loaded;
+    private ElementReference _wrapRef;
+
+    private async void OnMouseEnter()
+    {
+        _pinned = false;
+        if (!_loaded) LoadData();
+        await JS.InvokeVoidAsync("positionCallsignPopup", _wrapRef);
+    }
+
+    private void OnMouseLeave()
+    {
+        if (!_pinned) { /* nothing */ }
+    }
+
+    private async void OnLabelClick()
+    {
+        if (PinOnClick)
+        {
+            _pinned = !_pinned;
+            if (!_loaded) LoadData();
+            if (_pinned)
+                await JS.InvokeVoidAsync("positionCallsignPopup", _wrapRef);
+        }
+        else if (OnOpenChat.HasDelegate)
+        {
+            _ = OnOpenChat.InvokeAsync(Callsign);
+        }
+    }
+
+    private async void HandleOpenChat()
+    {
+        _pinned = false;
+        await OnOpenChat.InvokeAsync(Callsign);
+    }
+
+    private void LoadData()
+    {
+        _loaded = true;
+
+        // Station data from MH list
+        _station = ChatService.MhList.FirstOrDefault(s =>
+            string.Equals(s.Callsign, Callsign, StringComparison.OrdinalIgnoreCase));
+
+        // QRZ data (cached only – no new API call from component)
+        if (SettingsOptions.CurrentValue.Qrz.Enabled &&
+            QrzService.TryGetCached(Callsign, out var info))
+        {
+            _qrzInfo = info;
+            _firstName = string.IsNullOrEmpty(info?.FirstName) ? null : info.FirstName;
+        }
+    }
+}

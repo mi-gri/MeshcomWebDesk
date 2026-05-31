@@ -894,6 +894,11 @@ h1:focus {
     overflow: hidden;
     white-space: nowrap;
 }
+/* Popup muss sichtbar sein – overflow temporär aufheben */
+.mon-routing:has(.cs-popup-wrap:hover),
+.mon-routing:has(.cs-popup-pinned) {
+    overflow: visible;
+}
 .mon-call  { color: #cdd9e5; font-weight: 600; }
 .mon-call-link {
     cursor: pointer;
@@ -1328,6 +1333,55 @@ h1:focus {
     justify-content: center;
 }
 .mh-sc-btn-aprs:hover { background: #2d6a4f; color: #fff; }
+
+/* ===== CallsignPopup – reusable hover card (Chat + Monitor) ===== */
+.cs-popup-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    z-index: 1;
+}
+.cs-popup-wrap:hover,
+.cs-popup-wrap.cs-popup-pinned { z-index: 600; }
+
+.cs-popup-label {
+    cursor: pointer;
+    font-weight: 600;
+    color: #a0c4ff;
+    white-space: nowrap;
+}
+.cs-popup-label:hover { color: #79c0ff; text-decoration: underline dotted; }
+
+.cs-popup-card {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 600;
+    background: #16213e;
+    border: 1px solid #1a4a8a;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 4px;
+    min-width: 200px;
+    max-width: 270px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+    pointer-events: all;
+    white-space: normal;
+}
+.cs-popup-card::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: 0;
+    right: 0;
+    height: 6px;
+}
+.cs-popup-wrap:hover .cs-popup-card { display: block; }
+.cs-popup-pinned .cs-popup-card     { display: block; }
+
+/* Popup-Ausrichtung wird per JS gesteuert (positionCallsignPopup) */
 
 .mh-sc-gps {
     color: #58a6ff;
