@@ -2,6 +2,7 @@
 @using MeshcomWebDesk.Services
 @using MeshcomWebDesk.Helpers
 @using Microsoft.Extensions.Options
+@implements IDisposable
 @inject QrzService QrzService
 @inject ChatService ChatService
 @inject IOptionsMonitor<MeshcomSettings> SettingsOptions
@@ -101,18 +102,22 @@
         ? Callsign[..Callsign.IndexOf('-')]
         : Callsign;
 
-    private QrzInfo?     _qrzInfo;
-    private string?      _firstName;
+    private QrzInfo?      _qrzInfo;
+    private string?       _firstName;
     private HeardStation? _station;
-    private bool         _pinned;
-    private bool         _loaded;
+    private bool          _pinned;
+    private bool          _loaded;
     private ElementReference _wrapRef;
+    private readonly CancellationTokenSource _cts = new();
 
-    private async void OnMouseEnter()
+    public void Dispose() => _cts.Cancel();
+
+    private async Task OnMouseEnter()
     {
         _pinned = false;
         if (!_loaded) LoadData();
-        await JS.InvokeVoidAsync("positionCallsignPopup", _wrapRef);
+        try { await JS.InvokeVoidAsync("positionCallsignPopup", _wrapRef, _cts.Token); }
+        catch (Exception ex) when (ex is JSDisconnectedException or TaskCanceledException or ObjectDisposedException) { }
     }
 
     private void OnMouseLeave()
@@ -120,22 +125,25 @@
         if (!_pinned) { /* nothing */ }
     }
 
-    private async void OnLabelClick()
+    private async Task OnLabelClick()
     {
         if (PinOnClick)
         {
             _pinned = !_pinned;
             if (!_loaded) LoadData();
             if (_pinned)
-                await JS.InvokeVoidAsync("positionCallsignPopup", _wrapRef);
+            {
+                try { await JS.InvokeVoidAsync("positionCallsignPopup", _wrapRef, _cts.Token); }
+                catch (Exception ex) when (ex is JSDisconnectedException or TaskCanceledException or ObjectDisposedException) { }
+            }
         }
         else if (OnOpenChat.HasDelegate)
         {
-            _ = OnOpenChat.InvokeAsync(Callsign);
+            await OnOpenChat.InvokeAsync(Callsign);
         }
     }
 
-    private async void HandleOpenChat()
+    private async Task HandleOpenChat()
     {
         _pinned = false;
         await OnOpenChat.InvokeAsync(Callsign);
