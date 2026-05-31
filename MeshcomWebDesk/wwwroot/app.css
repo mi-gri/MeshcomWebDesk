@@ -3056,6 +3056,9 @@ h1:focus {
 .btn-sm.btn-danger                  { background: #3a0d0d; color: #ff7b72; border-color: #da3633; }
 .btn-sm.btn-danger:hover:not(:disabled)  { background: #da3633; color: #fff; }
 a.btn-sm                            { display: inline-flex; }  /* <a>-Tag-Fix */
+
+/* Kleine Screens: Labels ausblenden */
+@media (max-width: 600px) {
     .btn-label { display: none; }
     .telnet-header .btn-sm { padding: .25rem .4rem; font-size: .9rem; min-width: 2rem; }
     .node-switcher-select { max-width: 110px; font-size: .8rem; }
