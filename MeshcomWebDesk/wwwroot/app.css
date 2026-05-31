@@ -302,31 +302,34 @@ h1:focus {
 }
 
 .btn-action {
-    background: #2d6a4f;
-    color: #fff;
-    border: none;
+    background: #0f3460;
+    color: #a0c4ff;
+    border: 1px solid #1a4a8a;
     border-radius: 4px;
     padding: 6px 14px;
     cursor: pointer;
     font-size: 13px;
+    transition: background .15s, color .15s;
 }
 
 .btn-action:hover {
-    background: #40916c;
+    background: #1a5a9a;
+    color: #fff;
 }
 
 .btn-cancel {
-    background: #6c757d;
-    color: #fff;
-    border: none;
+    background: #21262d;
+    color: #c9d1d9;
+    border: 1px solid #30363d;
     border-radius: 4px;
     padding: 6px 14px;
     cursor: pointer;
     font-size: 13px;
+    transition: background .15s;
 }
 
 .btn-cancel:hover {
-    background: #868e96;
+    background: #30363d;
 }
 
 /* ===== Tab Content ===== */
@@ -1580,29 +1583,29 @@ h1:focus {
 }
 
 .btn-danger {
-    background: #6e2020;
-    color: #fff;
-    border: 1px solid #f85149;
+    background: #3a0d0d;
+    color: #ff7b72;
+    border: 1px solid #da3633;
     border-radius: 6px;
     padding: 8px 20px;
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.15s;
+    transition: background .15s, color .15s;
 }
-.btn-danger:hover { background: #a32a2a; }
+.btn-danger:hover { background: #da3633; color: #fff; }
 .btn-warn {
-    background: #5a3e00;
-    color: #fff;
+    background: #3a2800;
+    color: #e3b341;
     border: 1px solid #d29922;
     border-radius: 6px;
     padding: 8px 20px;
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.15s;
+    transition: background .15s, color .15s;
 }
-.btn-warn:hover { background: #7a5500; }
+.btn-warn:hover { background: #5a3e00; color: #fff; }
 
 /* ===== Status Bar ===== */
 .status-bar {
@@ -2999,12 +3002,34 @@ h1:focus {
 .settings-node-header{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
 .settings-node-primary-badge{font-size:.75em;background:#238636;color:#fff;border-radius:4px;padding:1px 7px;font-weight:600}
 .settings-node-actions{margin-left:auto;display:flex;gap:.4rem}
-.btn-small{font-size:.78em;padding:2px 9px;border-radius:4px;border:1px solid #30363d;background:#21262d;color:#c9d1d9;cursor:pointer}
-.btn-small:hover{background:#30363d}
-.btn-small.btn-danger{border-color:#da3633;color:#ff7b72}
+.btn-small{font-size:.78em;padding:2px 9px;border-radius:4px;border:1px solid #1a4a8a;background:#0f3460;color:#a0c4ff;cursor:pointer;transition:background .15s,color .15s}
+.btn-small:hover{background:#1a5a9a;color:#fff}
+.btn-small.btn-danger{border-color:#da3633;color:#ff7b72;background:#3a0d0d}
 .btn-small.btn-danger:hover{background:#da3633;color:#fff}
-.btn-secondary{background:#21262d;color:#c9d1d9;border:1px solid #30363d;border-radius:6px;padding:5px 14px;cursor:pointer;font-size:.875rem}
-.btn-secondary:hover{background:#30363d}
+.btn-secondary{background:#0f3460;color:#a0c4ff;border:1px solid #1a4a8a;border-radius:6px;padding:5px 14px;cursor:pointer;font-size:.875rem;transition:background .15s,color .15s}
+.btn-secondary:hover{background:#1a5a9a;color:#fff}
+
+/* ── btn-sm: einheitlicher Toolbar-Button (Karten-Stil) ─────────────── */
+.btn-sm {
+    background: #0f3460;
+    color: #a0c4ff;
+    border: 1px solid #1a4a8a;
+    border-radius: 4px;
+    padding: .28rem .65rem;
+    font-size: .82rem;
+    cursor: pointer;
+    transition: background .15s, color .15s, border-color .15s;
+    display: inline-flex;
+    align-items: center;
+    gap: .25rem;
+    text-decoration: none;
+    white-space: nowrap;
+    touch-action: manipulation;
+    line-height: 1.4;
+}
+.btn-sm:hover:not(:disabled) { background: #1a5a9a; color: #fff; }
+.btn-sm:active               { background: #154080; }
+.btn-sm:disabled             { opacity: .4; cursor: not-allowed; }
 
 /* ── Telnet toolbar: responsive layout ─────────────────────────────── */
 .telnet-header {
@@ -3022,8 +3047,15 @@ h1:focus {
     gap: .3rem;
     align-items: center;
 }
-/* Kleine Screens: Labels ausblenden */
-@media (max-width: 600px) {
+/* btn-sm Modifier: semantische Farben */
+.btn-sm.btn-action                  { /* Standard – kein Override nötig */ }
+.btn-sm.btn-primary                 { background: #1a5a9a; color: #fff; border-color: #4a9aff; }
+.btn-sm.btn-primary:hover:not(:disabled) { background: #2166b0; }
+.btn-sm.btn-warn                    { background: #3a2800; color: #e3b341; border-color: #d29922; }
+.btn-sm.btn-warn:hover:not(:disabled)    { background: #5a3e00; color: #fff; }
+.btn-sm.btn-danger                  { background: #3a0d0d; color: #ff7b72; border-color: #da3633; }
+.btn-sm.btn-danger:hover:not(:disabled)  { background: #da3633; color: #fff; }
+a.btn-sm                            { display: inline-flex; }  /* <a>-Tag-Fix */
     .btn-label { display: none; }
     .telnet-header .btn-sm { padding: .25rem .4rem; font-size: .9rem; min-width: 2rem; }
     .node-switcher-select { max-width: 110px; font-size: .8rem; }
@@ -3089,25 +3121,25 @@ h1:focus {
 /* Buttons */
 .cch-btn {
     padding: .3rem .65rem;
-    border-radius: 6px;
-    border: 1px solid #30363d;
-    background: #21262d;
-    color: #c9d1d9;
+    border-radius: 4px;
+    border: 1px solid #1a4a8a;
+    background: #0f3460;
+    color: #a0c4ff;
     cursor: pointer;
     font-size: .8rem;
     text-decoration: none;
     display: inline-flex;
     align-items: center;
     gap: .25rem;
-    transition: background .15s;
+    transition: background .15s, color .15s;
     white-space: nowrap;
     touch-action: manipulation;
 }
-.cch-btn:hover  { background: #30363d; }
-.cch-btn:active { background: #3d444d; }
-.cch-btn:disabled { opacity: .45; cursor: not-allowed; }
-.cch-btn-primary { background: #0f3460; color: #58a6ff; border-color: #58a6ff44; }
-.cch-btn-primary:hover { background: #1a4a8a; }
+.cch-btn:hover  { background: #1a5a9a; color: #fff; }
+.cch-btn:active { background: #154080; }
+.cch-btn:disabled { opacity: .4; cursor: not-allowed; }
+.cch-btn-primary { background: #1a5a9a; color: #fff; border-color: #4a9aff; }
+.cch-btn-primary:hover { background: #2166b0; }
 @media (max-width: 420px) { .cch-btn-label { display: none; } }
 
 /* Group collapsible */
