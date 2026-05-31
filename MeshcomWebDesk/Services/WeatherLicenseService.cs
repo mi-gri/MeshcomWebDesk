@@ -76,7 +76,7 @@ L/Qmv8jd0OXDOYme1Ztmec/IZzD/SzkGx/SGivZLtC1NYfV2//pK6mV4Fw7cFbwn
             }
 
             var myCallsign = _settings.Value.MyCallsign?.Trim();
-            if (!license.IsValidFor(myCallsign))
+            if (string.IsNullOrEmpty(myCallsign) || !license.IsValidFor(myCallsign))
             {
                 _logger.LogWarning("Weather license token is not valid for callsign {Callsign} or expired", myCallsign);
                 return null;
