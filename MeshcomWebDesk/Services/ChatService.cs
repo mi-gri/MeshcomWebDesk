@@ -33,11 +33,45 @@ public class ChatService
     /// Passing <c>null</c> uses <see cref="Guid.Empty"/> (legacy single-node fallback).</summary>
     private NodeState GetState(Guid? nodeId) => _nodeState.GetOrAdd(nodeId ?? Guid.Empty, _ => new NodeState());
 
-    /// <summary>Returns the state for the primary node (or Guid.Empty in legacy mode).</summary>
+    /// <summary>Returns the state for the primary node (or Guid.Empty in legacy mode).
+    /// When transitioning from legacy single-node mode to multi-node (i.e. the first
+    /// NodeProfile is added), the existing Guid.Empty bucket is migrated into the new
+    /// primary-node bucket so that tabs and messages are preserved.</summary>
     private NodeState GetPrimaryState()
     {
         var primaryId = _nodeManager?.PrimaryNode?.Id;
-        return GetState(primaryId);
+        if (primaryId is null)
+            return GetState(null); // legacy mode → Guid.Empty
+
+        // Multi-node mode: check whether the primary bucket already has data.
+        // If not, but Guid.Empty has data (legacy → multi-node transition), migrate it once.
+        var primaryState = GetState(primaryId);
+        if (primaryState.Tabs.IsEmpty && primaryState.Messages.Count == 0
+            && _nodeState.TryGetValue(Guid.Empty, out var legacyState)
+            && (!legacyState.Tabs.IsEmpty || legacyState.Messages.Count > 0))
+        {
+            lock (_lock)
+            {
+                // Re-check inside lock to avoid double-migration under concurrent access.
+                if (primaryState.Tabs.IsEmpty && primaryState.Messages.Count == 0)
+                {
+                    foreach (var kv in legacyState.Tabs)
+                        primaryState.Tabs.TryAdd(kv.Key, kv.Value);
+                    primaryState.Messages.AddRange(legacyState.Messages);
+                    primaryState.TabOrder = legacyState.TabOrder.ToList();
+                    primaryState.ActiveTabKey = legacyState.ActiveTabKey;
+                    foreach (var kv in legacyState.MhList)
+                        primaryState.MhList.TryAdd(kv.Key, kv.Value);
+                    legacyState.Tabs.Clear();
+                    legacyState.Messages.Clear();
+                    legacyState.MhList.Clear();
+                    _logger.LogInformation(
+                        "Migrated legacy single-node state (Guid.Empty) into primary node {PrimaryId}",
+                        primaryId);
+                }
+            }
+        }
+        return primaryState;
     }
 
     /// <summary>Resolves <paramref name="nodeId"/> to its state bucket:
