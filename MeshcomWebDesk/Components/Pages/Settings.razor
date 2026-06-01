@@ -823,6 +823,126 @@
             }
         </div>
 
+        <!-- Termin-Bake / Calendar Beacon -->
+        <div class="settings-section @(IsOpen("calbeacon") ? "" : "settings-section-collapsed")">
+            <h2 class="settings-section-title" @onclick='() => Toggle("calbeacon")'>📅 @Loc.T("Termin-Bake", "Calendar Beacon") <span class="section-chevron">@(IsOpen("calbeacon") ? "▲" : "▼")</span></h2>
+            @if (IsOpen("calbeacon")) {
+            <div style="margin-bottom:.5rem;font-size:.85rem;color:var(--text-secondary)">
+                @Loc.T("Sendet Baken-Ankündigungen für wiederkehrende Termine (z.\u00a0B. OV-Abende). Jeder Eintrag kann Tage/Stunden vorher und/oder zum Terminzeitpunkt senden.",
+                       "Sends beacon announcements for recurring events (e.\u00a0g. club meetings). Each entry can announce days/hours before and/or at the event time.")
+            </div>
+
+            @foreach (var entry in _model.CalendarBeacons)
+            {
+                var e = entry; // capture for lambda
+                <div style="border:1px solid var(--border);border-radius:6px;padding:.75rem;margin-bottom:.75rem;background:var(--bg-card)">
+                    <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.5rem;flex-wrap:wrap">
+                        <label class="settings-toggle" style="margin:0">
+                            <input type="checkbox" @bind="e.Enabled" />
+                            <span>@(e.Enabled ? Loc.T("Aktiv","Active") : Loc.T("Inaktiv","Inactive"))</span>
+                        </label>
+                        <input type="text" @bind="e.Title" placeholder='@Loc.T("Titel","Title")' style="flex:1;min-width:120px" />
+                        <button class="btn-send-now" style="background:#c0392b"
+                                @onclick="() => _model.CalendarBeacons.Remove(e)">🗑️</button>
+                    </div>
+                    <div class="settings-grid" style="gap:.4rem .75rem">
+                        <label>@Loc.T("Gruppe","Group")</label>
+                        <input type="text" @bind="e.Group" placeholder="#262" />
+
+                        <label>@Loc.T("Bakentext","Beacon Text")</label>
+                        <div class="settings-input-hint">
+                            <input type="text" @bind="e.Text" />
+                            <span class="settings-hint">
+                                @Loc.T("Variablen:","Variables:")
+                                <code>{mycall}</code>, <code>{title}</code>, <code>{event_date}</code>,
+                                <code>{event_time}</code>, <code>{days_until}</code>, <code>{hours_until}</code>
+                            </span>
+                        </div>
+
+                        <label>@Loc.T("Wiederholung","Recurrence")</label>
+                        <select @bind="e.RecurrenceType">
+                            <option value="@MeshcomWebDesk.Models.CalendarRecurrence.Once">@Loc.T("Einmalig","Once")</option>
+                            <option value="@MeshcomWebDesk.Models.CalendarRecurrence.Weekly">@Loc.T("Wöchentlich","Weekly")</option>
+                            <option value="@MeshcomWebDesk.Models.CalendarRecurrence.BiWeekly">@Loc.T("Zweiwöchentlich","Bi-weekly")</option>
+                            <option value="@MeshcomWebDesk.Models.CalendarRecurrence.Monthly">@Loc.T("Monatlich (Tag)","Monthly (Day)")</option>
+                            <option value="@MeshcomWebDesk.Models.CalendarRecurrence.NthWeekday">@Loc.T("N-ter Wochentag","Nth Weekday")</option>
+                            <option value="@MeshcomWebDesk.Models.CalendarRecurrence.LastWeekday">@Loc.T("Letzter Wochentag","Last Weekday")</option>
+                        </select>
+
+                        @if (e.RecurrenceType is MeshcomWebDesk.Models.CalendarRecurrence.Weekly
+                                             or MeshcomWebDesk.Models.CalendarRecurrence.BiWeekly
+                                             or MeshcomWebDesk.Models.CalendarRecurrence.NthWeekday
+                                             or MeshcomWebDesk.Models.CalendarRecurrence.LastWeekday)
+                        {
+                            <label>@Loc.T("Wochentag","Day of Week")</label>
+                            <select @bind="e.EventDayOfWeek">
+                                <option value="@DayOfWeek.Monday">@Loc.T("Montag","Monday")</option>
+                                <option value="@DayOfWeek.Tuesday">@Loc.T("Dienstag","Tuesday")</option>
+                                <option value="@DayOfWeek.Wednesday">@Loc.T("Mittwoch","Wednesday")</option>
+                                <option value="@DayOfWeek.Thursday">@Loc.T("Donnerstag","Thursday")</option>
+                                <option value="@DayOfWeek.Friday">@Loc.T("Freitag","Friday")</option>
+                                <option value="@DayOfWeek.Saturday">@Loc.T("Samstag","Saturday")</option>
+                                <option value="@DayOfWeek.Sunday">@Loc.T("Sonntag","Sunday")</option>
+                            </select>
+                        }
+
+                        @if (e.RecurrenceType == MeshcomWebDesk.Models.CalendarRecurrence.NthWeekday)
+                        {
+                            <label>@Loc.T("Ordnung (1=erster…)","Ordinal (1=first…)")</label>
+                            <input type="number" min="1" max="5" @bind="e.WeekdayOrdinal" />
+                        }
+
+                        @if (e.RecurrenceType == MeshcomWebDesk.Models.CalendarRecurrence.Monthly)
+                        {
+                            <label>@Loc.T("Tag des Monats","Day of Month")</label>
+                            <input type="number" min="1" max="31" @bind="e.EventDayOfMonth" />
+                        }
+
+                        @if (e.RecurrenceType is MeshcomWebDesk.Models.CalendarRecurrence.Once
+                                              or MeshcomWebDesk.Models.CalendarRecurrence.BiWeekly)
+                        {
+                            <label>@(e.RecurrenceType == MeshcomWebDesk.Models.CalendarRecurrence.Once
+                                ? Loc.T("Datum","Date")
+                                : Loc.T("Referenzdatum (Ankerpunkt)","Reference Date (anchor)"))</label>
+                            <input type="date" value="@e.ReferenceDate"
+                                   @onchange="ev => e.ReferenceDate = ev.Value?.ToString()" />
+                        }
+
+                        <label>@Loc.T("Uhrzeit","Time")</label>
+                        <input type="time" value="@e.EventTime"
+                               @onchange="ev => e.EventTime = ev.Value?.ToString() ?? e.EventTime" />
+
+                        <label>@Loc.T("Ankündigung Tage vorher","Announce days before") (0=@Loc.T("aus","off"))</label>
+                        <input type="number" min="0" max="30" @bind="e.AnnounceLeadDays" />
+
+                        <label>@Loc.T("Ankündigung Stunden vorher","Announce hours before") (0=@Loc.T("aus","off"))</label>
+                        <input type="number" min="0" max="72" @bind="e.AnnounceLeadHours" />
+
+                        <label>@Loc.T("Zum Terminzeitpunkt senden","Send at event time")</label>
+                        <label class="settings-toggle">
+                            <input type="checkbox" @bind="e.AnnounceAtEvent" />
+                            <span>@(e.AnnounceAtEvent ? Loc.T("Ja","Yes") : Loc.T("Nein","No"))</span>
+                        </label>
+
+                        @{
+                            var today     = DateOnly.FromDateTime(DateTime.Now);
+                            var nextDate  = MeshcomWebDesk.Services.CalendarBeaconService.GetNextOccurrence(e, today);
+                            var nextLabel = nextDate == DateOnly.MaxValue
+                                ? Loc.T("–","–")
+                                : $"{nextDate.ToString("dd.MM.yyyy")} {e.EventTime}";
+                        }
+                        <label style="color:var(--text-secondary);font-size:.8rem">@Loc.T("Nächster Termin","Next event")</label>
+                        <span style="font-size:.85rem;color:var(--accent)">📅 @nextLabel</span>
+                    </div>
+                </div>
+            }
+
+            <button class="btn-send-now" @onclick="() => _model.CalendarBeacons.Add(new MeshcomWebDesk.Models.CalendarBeaconEntry())">
+                ➕ @Loc.T("Termin hinzufügen", "Add Event")
+            </button>
+            }
+        </div>
+
         <!-- Telemetrie / Telemetry -->
         <div class="settings-section @(IsOpen("tele") ? "" : "settings-section-collapsed")">
             <h2 class="settings-section-title" @onclick='() => Toggle("tele")'>📊 @Loc.T("Telemetrie", "Telemetry") <span class="section-chevron">@(IsOpen("tele") ? "▲" : "▼")</span></h2>
@@ -2585,6 +2705,25 @@
             BeaconGroup         = s.BeaconGroup,
             BeaconText          = s.BeaconText,
             BeaconIntervalHours = s.BeaconIntervalHours,
+            CalendarBeacons     = s.CalendarBeacons
+                .Select(e => new MeshcomWebDesk.Models.CalendarBeaconEntry
+                {
+                    Id                = e.Id,
+                    Title             = e.Title,
+                    Enabled           = e.Enabled,
+                    Group             = e.Group,
+                    Text              = e.Text,
+                    RecurrenceType    = e.RecurrenceType,
+                    EventDayOfWeek    = e.EventDayOfWeek,
+                    EventDayOfMonth   = e.EventDayOfMonth,
+                    WeekdayOrdinal    = e.WeekdayOrdinal,
+                    EventTime         = e.EventTime,
+                    ReferenceDate     = e.ReferenceDate,
+                    AnnounceLeadDays  = e.AnnounceLeadDays,
+                    AnnounceLeadHours = e.AnnounceLeadHours,
+                    AnnounceAtEvent   = e.AnnounceAtEvent
+                })
+                .ToList(),
             TelemetryEnabled       = s.TelemetryEnabled,
             TelemetryFilePath      = s.TelemetryFilePath,
             TelemetryGroup         = s.TelemetryGroup,
@@ -3141,6 +3280,25 @@
                 BeaconGroup         = s.BeaconGroup,
                 BeaconText          = s.BeaconText,
                 BeaconIntervalHours = s.BeaconIntervalHours,
+                CalendarBeacons     = s.CalendarBeacons
+                    .Select(e => new MeshcomWebDesk.Models.CalendarBeaconEntry
+                    {
+                        Id                = e.Id,
+                        Title             = e.Title,
+                        Enabled           = e.Enabled,
+                        Group             = e.Group,
+                        Text              = e.Text,
+                        RecurrenceType    = e.RecurrenceType,
+                        EventDayOfWeek    = e.EventDayOfWeek,
+                        EventDayOfMonth   = e.EventDayOfMonth,
+                        WeekdayOrdinal    = e.WeekdayOrdinal,
+                        EventTime         = e.EventTime,
+                        ReferenceDate     = e.ReferenceDate,
+                        AnnounceLeadDays  = e.AnnounceLeadDays,
+                        AnnounceLeadHours = e.AnnounceLeadHours,
+                        AnnounceAtEvent   = e.AnnounceAtEvent
+                    })
+                    .ToList(),
                 TelemetryEnabled       = s.TelemetryEnabled,
                 TelemetryFilePath      = s.TelemetryFilePath,
                 TelemetryGroup         = s.TelemetryGroup,
@@ -3257,6 +3415,7 @@
         public string BeaconGroup         { get; set; } = string.Empty;
         public string BeaconText          { get; set; } = string.Empty;
         public int    BeaconIntervalHours { get; set; } = 8;
+        public List<MeshcomWebDesk.Models.CalendarBeaconEntry> CalendarBeacons { get; set; } = [];
         public bool   TelemetryEnabled       { get; set; }
         public string TelemetryFilePath      { get; set; } = string.Empty;
         public string TelemetryGroup         { get; set; } = string.Empty;
@@ -3396,6 +3555,7 @@
             BeaconGroup         = BeaconGroup,
             BeaconText          = BeaconText,
             BeaconIntervalHours = BeaconIntervalHours,
+            CalendarBeacons     = CalendarBeacons,
             TelemetryEnabled       = TelemetryEnabled,
             TelemetryFilePath      = TelemetryFilePath,
             TelemetryGroup         = TelemetryGroup,

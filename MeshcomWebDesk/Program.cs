@@ -142,6 +142,7 @@ builder.Services.AddSingleton<MeshcomWebDesk.Services.WeatherLicenseService>();
 builder.Services.AddSingleton<MeshcomWebDesk.Services.WeatherApiPollingService>();
 builder.Services.AddSingleton<GatewayService>();
 builder.Services.AddSingleton<NodeManager>();
+builder.Services.AddSingleton<CalendarBeaconService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<UpdateCheckService>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<GatewayService>());
 builder.Services.AddSingleton<IMeshcomSender>(sp => sp.GetRequiredService<MeshcomUdpService>());
@@ -150,6 +151,7 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<MeshcomUdpService>
 builder.Services.AddHostedService(sp => sp.GetRequiredService<DataPersistenceService>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<MqttService>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<MeshcomWebDesk.Services.WeatherApiPollingService>());
+builder.Services.AddHostedService(sp => sp.GetRequiredService<CalendarBeaconService>());
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();

@@ -141,6 +141,23 @@ public class SettingsService
                 ["BeaconGroup"]         = s.BeaconGroup,
                 ["BeaconText"]          = s.BeaconText,
                 ["BeaconIntervalHours"] = s.BeaconIntervalHours,
+                ["CalendarBeacons"]     = new JsonArray(s.CalendarBeacons.Select(e => (JsonNode?)new JsonObject
+                {
+                    ["Id"]                = e.Id,
+                    ["Title"]             = e.Title,
+                    ["Enabled"]           = e.Enabled,
+                    ["Group"]             = e.Group,
+                    ["Text"]              = e.Text,
+                    ["RecurrenceType"]    = e.RecurrenceType.ToString(),
+                    ["EventDayOfWeek"]    = e.EventDayOfWeek.ToString(),
+                    ["EventDayOfMonth"]   = e.EventDayOfMonth,
+                    ["WeekdayOrdinal"]    = e.WeekdayOrdinal,
+                    ["EventTime"]         = e.EventTime,
+                    ["ReferenceDate"]     = e.ReferenceDate,
+                    ["AnnounceLeadDays"]  = e.AnnounceLeadDays,
+                    ["AnnounceLeadHours"] = e.AnnounceLeadHours,
+                    ["AnnounceAtEvent"]   = e.AnnounceAtEvent
+                }).ToArray()),
                 ["TelemetryEnabled"]       = s.TelemetryEnabled,
                 ["TelemetryFilePath"]      = s.TelemetryFilePath,
                 ["TelemetryGroup"]         = s.TelemetryGroup,

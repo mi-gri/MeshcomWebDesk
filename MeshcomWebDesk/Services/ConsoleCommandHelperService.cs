@@ -60,6 +60,7 @@ public sealed class ConsoleCommandHelperService : IDisposable
 
     private readonly object _pendingLock = new();
     private readonly List<PendingCommand> _pending = [];
+    private IDisposable? _settingsChangeToken;
 
     // Timeout: nach dieser Zeit wird ein PendingCommand ohne Antwort verworfen.
     private static readonly TimeSpan ResponseTimeout = TimeSpan.FromSeconds(4);
@@ -83,7 +84,7 @@ public sealed class ConsoleCommandHelperService : IDisposable
         _logger   = logger;
 
         AttachToActiveConsole();
-        _settings.OnChange((_, _) =>
+        _settingsChangeToken = _settings.OnChange((_, _) =>
         {
             DetachFromAll();
             AttachToActiveConsole();
@@ -267,6 +268,7 @@ public sealed class ConsoleCommandHelperService : IDisposable
             {
                 pc.Cts.Cancel();
                 lock (_pendingLock) _pending.Remove(pc);
+                OnChange?.Invoke();
             }
         }
 
@@ -309,7 +311,6 @@ public sealed class ConsoleCommandHelperService : IDisposable
         if (CurrentValues.TryGetValue(name, out var existing) && existing == value)
             return false;
         CurrentValues[name] = value;
-        OnChange?.Invoke();
         return true;
     }
 
@@ -320,6 +321,7 @@ public sealed class ConsoleCommandHelperService : IDisposable
             foreach (var p in _pending) p.Cts.Cancel();
             _pending.Clear();
         }
+        _settingsChangeToken?.Dispose();
         DetachFromAll();
     }
 }

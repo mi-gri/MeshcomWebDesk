@@ -161,6 +161,12 @@ public class MeshcomSettings
     public int BeaconIntervalHours { get; set; } = 1;
 
     /// <summary>
+    /// List of calendar-based beacon entries. Each entry defines a recurring event
+    /// (e.g. club meeting every first Friday) and the announcement lead times.
+    /// </summary>
+    public List<CalendarBeaconEntry> CalendarBeacons { get; set; } = [];
+
+    /// <summary>
     /// When true, telemetry data is periodically read from <see cref="TelemetryFilePath"/>
     /// and sent as a text message to <see cref="TelemetryGroup"/>.
     /// </summary>
