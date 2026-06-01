@@ -54,11 +54,15 @@ public static class MeshcomLookup
         if (string.IsNullOrEmpty(rawFirmware) || rawFirmware == "0")
             return string.Empty;
 
-        // Firmware can be "4.35" (string) or "35" (integer as string)
-        // If it looks like a plain integer and is >= 10, format as "major.minor"
+        // Firmware can be "4.35" (string) or "35" / "435" (integer as string)
+        // If it looks like a plain integer, format as "major.minor":
+        //   >= 100  → major = intVer / 100, minor = intVer % 100  (e.g. 435 → 4.35)
+        //   < 100   → major = 4 (MeshCom 4.x series), minor = intVer  (e.g. 35 → 4.35)
         var display = rawFirmware;
         if (int.TryParse(rawFirmware, out var intVer) && intVer > 0 && !rawFirmware.Contains('.'))
-            display = $"{intVer / 100}.{intVer % 100:D2}";
+            display = intVer >= 100
+                ? $"{intVer / 100}.{intVer % 100:D2}"
+                : $"4.{intVer:D2}";
 
         // Append sub-version letter if meaningful (not "#" which means unknown)
         if (!string.IsNullOrEmpty(fwSub) && fwSub != "#")
