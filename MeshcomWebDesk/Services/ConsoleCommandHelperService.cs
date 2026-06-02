@@ -6,8 +6,9 @@ namespace MeshcomWebDesk.Services;
 
 /// <summary>
 /// Verwaltet den Console Command Helper.
-/// Horcht auf den aktiven IConsoleService, parst eingehende Zeilen
-/// und hält den zuletzt bekannten Wert jedes Befehls vor.
+/// Horcht auf ALLE verfügbaren IConsoleService-Instanzen und verwendet
+/// jeweils die aktuell verbundene Console (bevorzugt die in den Einstellungen
+/// konfigurierte, fällt sonst auf jede andere verbundene zurück).
 ///
 /// Status-Update-Strategie:
 ///   Jeder gesendete Befehl wird als PendingCommand registriert.
@@ -61,6 +62,7 @@ public sealed class ConsoleCommandHelperService : IDisposable
     private readonly object _pendingLock = new();
     private readonly List<PendingCommand> _pending = [];
     private IDisposable? _settingsChangeToken;
+    private IConsoleService? _lastActiveConsole;
 
     // Timeout: nach dieser Zeit wird ein PendingCommand ohne Antwort verworfen.
     private static readonly TimeSpan ResponseTimeout = TimeSpan.FromSeconds(4);
@@ -83,26 +85,46 @@ public sealed class ConsoleCommandHelperService : IDisposable
         _hmac     = hmac;
         _logger   = logger;
 
-        AttachToActiveConsole();
+        AttachToAllConsoles();
         _settingsChangeToken = _settings.OnChange((_, _) =>
         {
-            DetachFromAll();
-            AttachToActiveConsole();
+            // Einstellungsänderung: CurrentValues leeren damit der nächste
+            // Refresh frische Werte vom neuen Ziel liefert.
+            CurrentValues.Clear();
+            OnChange?.Invoke();
         });
     }
 
     // ── Aktiver Console-Service ──────────────────────────────────────────
 
-    private IConsoleService ActiveConsole => _settings.CurrentValue.ConsoleMode switch
+    private IConsoleService ActiveConsole
     {
-        "serial" => _serial,
-        "hmac"   => _hmac,
-        _        => _telnet,
-    };
+        get
+        {
+            // Konfigurierte Console bevorzugen wenn verbunden
+            var configured = _settings.CurrentValue.ConsoleMode switch
+            {
+                "serial" => (IConsoleService)_serial,
+                "hmac"   => _hmac,
+                _        => _telnet,
+            };
+            if (configured.IsConnected) return configured;
 
-    private void AttachToActiveConsole()
+            // Fallback: jede verbundene Console
+            if (_serial.IsConnected)  return _serial;
+            if (_telnet.IsConnected)  return _telnet;
+            if (_hmac.IsConnected)    return _hmac;
+
+            // Keine verbunden – konfigurierte zurückgeben (IsConnected = false)
+            return configured;
+        }
+    }
+
+    private void AttachToAllConsoles()
     {
-        ActiveConsole.OnChange += HandleConsoleChange;
+        _serial.OnChange += HandleConsoleChange;
+        _telnet.OnChange += HandleConsoleChange;
+        _hmac.OnChange   += HandleConsoleChange;
     }
 
     private void DetachFromAll()
