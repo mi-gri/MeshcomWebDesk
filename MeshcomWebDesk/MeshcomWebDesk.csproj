@@ -45,4 +45,8 @@
     <Folder Include="MeshcomWebDesk\Components\Pages\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include=".github\workflows\docker-publish.yml" />
+  </ItemGroup>
+
 </Project>
