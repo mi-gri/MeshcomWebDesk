@@ -66,11 +66,6 @@ public class WeatherStatusCommand : IBotCommand
             sb.Append(" | Keine Daten");
         }
 
-        // License status
-        sb.Append(_pollingService.IsLicensed
-            ? $" | lizenziert {_settings.Value.MyCallsign}"
-            : " | TESTVERSION");
-
         return Task.FromResult(sb.ToString());
     }
 }

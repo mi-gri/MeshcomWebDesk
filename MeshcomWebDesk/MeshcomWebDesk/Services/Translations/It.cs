@@ -5,6 +5,18 @@ internal static class It
 {
     public static readonly Dictionary<string, string> Strings = new(StringComparer.Ordinal)
     {
+        // License
+        ["Licensed for"]                   = "Licenziato per",
+        ["Free unlicensed version"]        = "Versione gratuita non licenziata",
+        ["Free \u2013 License via PayPal?"]       = "Gratuito \u2013 Licenza via PayPal?",
+        ["Get a license: PayPal donation from \u20ac10 \u2192 callsign license key"] = "Ottieni una licenza: donazione PayPal da 10\u20ac \u2192 chiave di licenza per nominativo",
+        ["License"]                        = "Licenza",
+        ["License Token"]                  = "Token di licenza",
+        ["Licensed"]                       = "Licenziato",
+        ["Unlicensed"]                     = "Non licenziato",
+        ["Enter your license token here."] = "Inserisci qui il tuo token di licenza.",
+        ["To obtain a license, send your callsign (without SSID) to DH1FR."] = "Per ottenere una licenza, invia il tuo nominativo (senza SSID) a DH1FR.",
+
         // Chat – ping confirmation
         ["This usually belongs in a direct tab."] = "Di solito appartiene a una scheda diretta.",
 
@@ -234,6 +246,43 @@ internal static class It
         ["Send Beacon Now"]         = "Invia beacon ora",
         ["Send now"]                = "Invia ora",
         ["Sending…"]                = "Invio in corso…",
+
+        // Settings – Calendar Beacon
+        ["Calendar Beacon"]         = "Beacon calendario",
+        ["Sends beacon announcements for recurring events (e.\u00a0g. club meetings). Each entry can announce days/hours before and/or at the event time."]
+                                    = "Invia annunci beacon per eventi ricorrenti (es. serate del club). Ogni voce può annunciare giorni/ore prima e/o all'ora dell'evento.",
+        ["Recurrence"]              = "Ricorrenza",
+        ["Once"]                    = "Una volta",
+        ["Weekly"]                  = "Settimanale",
+        ["Bi-weekly"]               = "Bisettimanale",
+        ["Monthly (Day)"]           = "Mensile (giorno)",
+        ["Nth Weekday"]             = "Ennesimo giorno feriale",
+        ["Last Weekday"]            = "Ultimo giorno feriale",
+        ["Day of Week"]             = "Giorno della settimana",
+        ["Monday"]                  = "Lunedì",
+        ["Tuesday"]                 = "Martedì",
+        ["Wednesday"]               = "Mercoledì",
+        ["Thursday"]                = "Giovedì",
+        ["Friday"]                  = "Venerdì",
+        ["Saturday"]                = "Sabato",
+        ["Sunday"]                  = "Domenica",
+        ["Ordinal (1=first…)"]      = "Ordinale (1=primo…)",
+        ["Day of Month"]            = "Giorno del mese",
+        ["Reference Date (anchor)"] = "Data di riferimento (ancora)",
+        ["Announce days before"]    = "Annuncia giorni prima",
+        ["Announce hours before"]   = "Annuncia ore prima",
+        ["Send at event time"]      = "Invia all'ora dell'evento",
+        ["Next event"]              = "Prossimo evento",
+        ["Add Event"]               = "Aggiungi evento",
+        ["Variables:"]              = "Variabili:",
+        ["Title"]                   = "Titolo",
+        ["Inactive"]                = "Inattivo",
+
+        // Console Command Helper
+        ["Status refreshed"]        = "Stato aggiornato",
+        ["Use own IP"]              = "Usa il mio IP",
+        ["Really send command?"]    = "Inviare davvero il comando?",
+        ["Yes, send"]               = "Sì, invia",
 
         // Settings – Auto-Reply
         ["Auto-Reply"]              = "Risposta automatica",

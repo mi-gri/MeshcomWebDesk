@@ -7,9 +7,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
-    <AssemblyVersion>1.11.0.0</AssemblyVersion>
-    <FileVersion>1.11.0.0</FileVersion>
-    <InformationalVersion>1.11.0</InformationalVersion>
+    <AssemblyVersion>1.12.0.0</AssemblyVersion>
+    <FileVersion>1.12.0.0</FileVersion>
+    <InformationalVersion>1.12.0</InformationalVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -41,7 +41,16 @@
     </None>
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="MeshcomWebDesk\Components\Pages\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include=".github\workflows\docker-publish.yml" />
+  </ItemGroup>
+
 </Project>
+
 
 
 

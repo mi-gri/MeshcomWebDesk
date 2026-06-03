@@ -194,6 +194,12 @@
                                                 💬 @Loc.T("Chat öffnen", "Open Chat")
                                             </button>
                                             <a class="mh-sc-btn mh-sc-btn-aprs"
+                                               href="https://www.qrz.com/db/@(Uri.EscapeDataString(s.Callsign.Contains('-') ? s.Callsign[..s.Callsign.IndexOf('-')] : s.Callsign))"
+                                               target="_blank" rel="noopener"
+                                               @onclick:stopPropagation="true">
+                                                🔗 QRZ.com
+                                            </a>
+                                            <a class="mh-sc-btn mh-sc-btn-aprs"
                                                href="https://aprs.fi/#!call=a/@(Uri.EscapeDataString(s.Callsign))"
                                                target="_blank" rel="noopener"
                                                @onclick:stopPropagation="true">

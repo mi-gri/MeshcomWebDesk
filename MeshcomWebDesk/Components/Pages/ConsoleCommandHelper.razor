@@ -1,0 +1,410 @@
+@page "/console-commands"
+@using MeshcomWebDesk.Models
+@using MeshcomWebDesk.Services
+@using Microsoft.Extensions.Options
+@using System.Net.NetworkInformation
+@using System.Net.Sockets
+@rendermode InteractiveServer
+@inject ConsoleCommandHelperService CmdHelper
+@inject IOptionsMonitor<MeshcomSettings> SettingsMon
+@inject LanguageService Loc
+@implements IDisposable
+
+<PageTitle>🎛️ Command Helper – MeshCom WebDesk</PageTitle>
+
+<div class="cch-page">
+
+    @* ── Header ── *@
+    <div class="cch-header">
+        <span class="cch-title">🎛️ @Loc.T("Console Command Helper", "Console Command Helper")</span>
+        <div class="cch-header-actions">
+            @if (!CmdHelper.IsConnected)
+            {
+                <span class="cch-badge-disconnected">⚠ @Loc.T("Nicht verbunden", "Not connected")</span>
+            }
+            else if (CmdHelper.LastRefresh.HasValue)
+            {
+                <span class="cch-last-refresh">@Loc.T("Zuletzt", "Last") @CmdHelper.LastRefresh.Value.ToString("HH:mm:ss")</span>
+            }
+            <button class="cch-btn cch-btn-primary" @onclick="RefreshAsync" disabled="@(!CmdHelper.IsConnected)">
+                🔄 <span class="cch-btn-label">@Loc.T("Status abrufen", "Refresh")</span>
+            </button>
+            <a class="cch-btn" href="/telnet">
+                🖥️ <span class="cch-btn-label">Console</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="cch-scroll">
+
+        @* ── Gruppen ── *@
+        @foreach (var group in Groups)
+        {
+            var cmds = GroupCommands(group).ToList();
+            if (!cmds.Any()) continue;
+            <details class="cch-group" open>
+                <summary class="cch-group-title">
+                    <span class="cch-group-icon">@GroupIcon(group)</span>
+                    <span>@Loc.T(group.ToString(), group.ToString())</span>
+                    <span class="cch-group-count">@cmds.Count</span>
+                </summary>
+
+                <div class="cch-grid">
+                    @foreach (var cmd in cmds)
+                    {
+                        var curVal = CmdHelper.CurrentValues.TryGetValue(cmd.Name, out var v) ? v : null;
+                        <div class="cch-card @(cmd.Type == ConsoleCommandType.Toggle ? (IsOn(cmd.Name) ? "cch-card-on" : "cch-card-off") : "")">
+                            <div class="cch-card-top">
+                                <code class="cch-cmd-name">--@cmd.Name</code>
+                                @if (curVal == "?")
+                                {
+                                    <span class="cch-value-badge cch-value-error" title="Befehl fehlgeschlagen">⚠</span>
+                                }
+                                else if (curVal != null)
+                                {
+                                    <span class="cch-value-badge cch-value-known">@curVal</span>
+                                }
+                                else
+                                {
+                                    <span class="cch-value-badge cch-value-unknown">–</span>
+                                }
+                            </div>
+                            <div class="cch-card-desc">
+                                @cmd.Description@(!string.IsNullOrEmpty(cmd.Unit) ? $" [{cmd.Unit}]" : "")
+                            </div>
+                            <div class="cch-card-action">
+                                @switch (cmd.Type)
+                                {
+                                    case ConsoleCommandType.Toggle:
+                                        <button class="cch-toggle-btn @(IsOn(cmd.Name) ? "cch-toggle-btn-on" : "cch-toggle-btn-off")"
+                                                @onclick="() => SendToggleAsync(cmd)"
+                                                disabled="@(!CmdHelper.IsConnected)">
+                                            <span class="cch-toggle-track">
+                                                <span class="cch-toggle-thumb"></span>
+                                            </span>
+                                            <span>@(IsOn(cmd.Name) ? "ON" : "OFF")</span>
+                                        </button>
+                                        break;
+
+                                    case ConsoleCommandType.Value:
+                                        <div class="cch-input-row">
+                                            @if (cmd.Options.Length > 0)
+                                            {
+                                                <select class="cch-input" @bind="_editValues[cmd.Name]">
+                                                    @foreach (var opt in cmd.Options)
+                                                    {
+                                                        <option value="@opt">@opt @cmd.Unit</option>
+                                                    }
+                                                </select>
+                                            }
+                                            else
+                                            {
+                                                <input class="cch-input" type="number"
+                                                       min="@cmd.Min" max="@cmd.Max" step="@(cmd.Step ?? 1)"
+                                                       @bind="_editValues[cmd.Name]"
+                                                       placeholder="@(cmd.Unit ?? "")" />
+                                            }
+                                            <button class="cch-send-btn"
+                                                    @onclick="() => SendValueAsync(cmd)"
+                                                    disabled="@(!CmdHelper.IsConnected || string.IsNullOrWhiteSpace(_editValues.GetValueOrDefault(cmd.Name)))">✓</button>
+                                        </div>
+                                        break;
+
+                                    case ConsoleCommandType.Text:
+                                        <div class="cch-input-row">
+                                            <input class="cch-input" type="text"
+                                                   @bind="_editValues[cmd.Name]"
+                                                   placeholder="@cmd.Description" />
+                                            @if (cmd.SuggestLocalIp)
+                                            {
+                                                <div class="cch-ip-picker">
+                                                    <button class="cch-ip-picker-btn" type="button"
+                                                            @onclick="() => ToggleIpPicker(cmd.Name)"
+                                                            title="@Loc.T("Eigene IP übernehmen", "Use own IP")">
+                                                        📍
+                                                    </button>
+                                                    @if (_showIpPicker == cmd.Name)
+                                                    {
+                                                        <div class="cch-ip-dropdown">
+                                                            @foreach (var ip in _localIps)
+                                                            {
+                                                                <button type="button" class="cch-ip-option"
+                                                                        @onclick="() => PickIp(cmd.Name, ip)">
+                                                                    @ip
+                                                                </button>
+                                                            }
+                                                        </div>
+                                                    }
+                                                </div>
+                                            }
+                                            <button class="cch-send-btn"
+                                                    @onclick="() => SendValueAsync(cmd)"
+                                                    disabled="@(!CmdHelper.IsConnected || string.IsNullOrWhiteSpace(_editValues.GetValueOrDefault(cmd.Name)))">✓</button>
+                                        </div>
+                                        break;
+
+                                    case ConsoleCommandType.Action:
+                                        <button class="cch-action-btn @(cmd.NeedsConfirm ? "cch-action-btn-danger" : "")"
+                                                @onclick="() => SendActionAsync(cmd)"
+                                                disabled="@(!CmdHelper.IsConnected)">
+                                            @(cmd.NeedsConfirm ? "⚠ " : "▶ ")@cmd.Name
+                                        </button>
+                                        break;
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </details>
+        }
+    </div>
+
+    @* ── Spektrum-Chart ── *@
+    @if (CmdHelper.SpectrumScan.Points.Count > 0)
+    {
+        <SpectrumChart Scan="CmdHelper.SpectrumScan" TxFreqMhz="@GetTxFreqMhz()" />
+    }
+
+    @* ── Bestätigungs-Dialog ── *@
+    @if (_confirmCmd is not null)
+    {
+        <div class="cch-overlay" @onclick="() => _confirmCmd = null">
+            <div class="cch-dialog" @onclick:stopPropagation>
+                <div class="cch-dialog-title">@Loc.T("Befehl wirklich senden?", "Really send command?")</div>
+                <code class="cch-dialog-cmd">--@_confirmCmd.Name</code>
+                <div class="cch-dialog-actions">
+                    <button class="cch-action-btn cch-action-btn-danger" @onclick="ConfirmSendAsync">✓ @Loc.T("Ja, senden", "Yes, send")</button>
+                    <button class="cch-action-btn" @onclick="() => _confirmCmd = null">✕ @Loc.T("Abbrechen", "Cancel")</button>
+                </div>
+            </div>
+        </div>
+    }
+
+    @* ── Toast ── *@
+    @if (!string.IsNullOrEmpty(_toast))
+    {
+        <div class="cch-toast @(_toastIsError ? "cch-toast-error" : "")">@_toast</div>
+    }
+
+    @* ── Mini Console Popup ── *@
+    @if (_showConsole)
+    {
+        <div class="cch-overlay" @onclick="() => _showConsole = false">
+            <div class="cch-console-panel" @onclick:stopPropagation>
+                <div class="cch-console-header">
+                    <span>🖥️ Console</span>
+                    @if (!CmdHelper.IsConnected)
+                    {
+                        <span class="cch-badge-disconnected">⚠ @Loc.T("Nicht verbunden", "Not connected")</span>
+                    }
+                    <button class="cch-console-close" @onclick="() => _showConsole = false">✕</button>
+                </div>
+                <div class="cch-console-lines" @ref="_consoleEnd">
+                    @foreach (var line in ConsoleLines)
+                    {
+                        <div class="cch-console-line">@line</div>
+                    }
+                </div>
+                <div class="cch-console-input-row">
+                    <input class="cch-input cch-console-input"
+                           @bind="_consoleLine"
+                           @bind:event="oninput"
+                           @onkeydown="ConsoleKeyDown"
+                           placeholder="Befehl eingeben…"
+                           disabled="@(!CmdHelper.IsConnected)" />
+                    <button class="cch-send-btn" @onclick="ConsoleSend"
+                            disabled="@(!CmdHelper.IsConnected || string.IsNullOrWhiteSpace(_consoleLine))">▶</button>
+                </div>
+            </div>
+        </div>
+    }
+
+</div>
+
+@code {
+    private static readonly ConsoleCommandGroup[] Groups =
+        Enum.GetValues<ConsoleCommandGroup>();
+
+    private readonly Dictionary<string, string> _editValues = new(StringComparer.OrdinalIgnoreCase);
+    private ConsoleCommandDef? _confirmCmd;
+    private string _toast = string.Empty;
+    private bool _toastIsError;
+    private System.Threading.Timer? _toastTimer;
+    private bool _showConsole;
+    private string _consoleLine = string.Empty;
+    private ElementReference _consoleEnd;
+    private string? _showIpPicker;
+    private List<string> _localIps = [];
+
+    private static List<string> GetLocalIpv4Addresses()
+        => NetworkInterface.GetAllNetworkInterfaces()
+            .Where(n => n.OperationalStatus == OperationalStatus.Up
+                     && n.NetworkInterfaceType != NetworkInterfaceType.Loopback)
+            .SelectMany(n => n.GetIPProperties().UnicastAddresses)
+            .Where(a => a.Address.AddressFamily == AddressFamily.InterNetwork)
+            .Select(a => a.Address.ToString())
+            .ToList();
+
+    private List<string> ConsoleLines
+    {
+        get
+        {
+            var svc = CmdHelper.ActiveConsolePublic;
+            if (svc is null) return [];
+            lock (svc.Lines) return [.. svc.Lines.TakeLast(200)];
+        }
+    }
+
+    // ── Lifecycle ─────────────────────────────────────────────────────────
+
+    protected override void OnInitialized()
+    {
+        CmdHelper.OnChange += HandleChange;
+        CmdHelper.OnCommandFailed += HandleCommandFailed;
+        _localIps = GetLocalIpv4Addresses();
+        foreach (var def in ConsoleCommandDefinitions.All)
+        {
+            _editValues[def.Name] = CmdHelper.CurrentValues.TryGetValue(def.Name, out var v) ? v : string.Empty;
+        }
+    }
+
+    public void Dispose()
+    {
+        CmdHelper.OnChange -= HandleChange;
+        CmdHelper.OnCommandFailed -= HandleCommandFailed;
+        _toastTimer?.Dispose();
+    }
+
+    private void HandleChange()
+    {
+        foreach (var def in ConsoleCommandDefinitions.All)
+        {
+            if (CmdHelper.CurrentValues.TryGetValue(def.Name, out var val))
+            {
+                if (string.IsNullOrEmpty(_editValues.GetValueOrDefault(def.Name)))
+                    _editValues[def.Name] = val;
+            }
+        }
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleCommandFailed(string cmdName, string errorText)
+    {
+        ShowToast($"⚠ --{cmdName}: {errorText}", isError: true);
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────
+
+    private static IEnumerable<ConsoleCommandDef> GroupCommands(ConsoleCommandGroup group)
+        => ConsoleCommandDefinitions.All.Where(c => c.Group == group);
+
+    private bool IsOn(string name)
+        => CmdHelper.CurrentValues.TryGetValue(name, out var v) && v.Equals("on", StringComparison.OrdinalIgnoreCase);
+
+    private static string GroupIcon(ConsoleCommandGroup g) => g switch
+    {
+        ConsoleCommandGroup.LoRa       => "📡",
+        ConsoleCommandGroup.System     => "⚙️",
+        ConsoleCommandGroup.Netzwerk   => "🌐",
+        ConsoleCommandGroup.Debug      => "🐛",
+        ConsoleCommandGroup.GPS        => "🛰️",
+        ConsoleCommandGroup.Sensoren   => "🌡️",
+        ConsoleCommandGroup.Telemetrie => "📊",
+        _                              => "▪",
+    };
+
+    // ── Aktionen ──────────────────────────────────────────────────────────
+
+    private async Task RefreshAsync()
+    {
+        await CmdHelper.RefreshAsync();
+        ShowToast(Loc.T("Status abgerufen", "Status refreshed"));
+    }
+
+    private async Task SendToggleAsync(ConsoleCommandDef cmd)
+    {
+        var newVal = IsOn(cmd.Name) ? "off" : "on";
+        await CmdHelper.SendCommandAsync(cmd.Name, newVal);
+        ShowToast($"--{cmd.Name} {newVal}");
+    }
+
+    private async Task SendValueAsync(ConsoleCommandDef cmd)
+    {
+        var val = _editValues.GetValueOrDefault(cmd.Name, string.Empty);
+        if (string.IsNullOrWhiteSpace(val)) return;
+        await CmdHelper.SendCommandAsync(cmd.Name, val);
+        ShowToast($"--{cmd.Name} {val}");
+    }
+
+    private Task SendActionAsync(ConsoleCommandDef cmd)
+    {
+        if (cmd.NeedsConfirm)
+        {
+            _confirmCmd = cmd;
+            return Task.CompletedTask;
+        }
+        return ExecuteActionAsync(cmd);
+    }
+
+    private async Task ConfirmSendAsync()
+    {
+        if (_confirmCmd is null) return;
+        await ExecuteActionAsync(_confirmCmd);
+        _confirmCmd = null;
+    }
+
+    private async Task ExecuteActionAsync(ConsoleCommandDef cmd)
+    {
+        await CmdHelper.SendCommandAsync(cmd.Name);
+        ShowToast($"--{cmd.Name} gesendet");
+    }
+
+    private void ShowToast(string msg, bool isError = false)
+    {
+        _toast = msg;
+        _toastIsError = isError;
+        _toastTimer?.Dispose();
+        _toastTimer = new System.Threading.Timer(_ =>
+        {
+            _toast = string.Empty;
+            _toastIsError = false;
+            _ = InvokeAsync(StateHasChanged);
+        }, null, isError ? 5000 : 2500, Timeout.Infinite);
+        StateHasChanged();
+    }
+
+    private double? GetTxFreqMhz()
+    {
+        if (CmdHelper.CurrentValues.TryGetValue("txfreq", out var v) &&
+            double.TryParse(v.Replace(',', '.'),
+                System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out var freq))
+            return freq;
+        return null;
+    }
+
+    private void ToggleIpPicker(string cmdName)
+    {
+        _showIpPicker = _showIpPicker == cmdName ? null : cmdName;
+    }
+
+    private void PickIp(string cmdName, string ip)
+    {
+        _editValues[cmdName] = ip;
+        _showIpPicker = null;
+    }
+
+    private async Task ConsoleSend()
+    {
+        if (string.IsNullOrWhiteSpace(_consoleLine)) return;
+        await CmdHelper.SendRawAsync(_consoleLine.Trim());
+        _consoleLine = string.Empty;
+        StateHasChanged();
+    }
+
+    private async Task ConsoleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await ConsoleSend();
+    }
+}

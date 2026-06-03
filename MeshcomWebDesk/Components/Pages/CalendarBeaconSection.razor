@@ -1,0 +1,220 @@
+@using MeshcomWebDesk.Models
+@using MeshcomWebDesk.Services
+
+@* ── Termin-Baken (CalendarBeacons) ─────────────────────────────────────────── *@
+
+<div class="settings-section">
+    <h5>📅 Termin-Baken</h5>
+    <p class="text-muted small">
+        Sendet automatisch Ankündigungen zu wiederkehrenden Terminen (z.&nbsp;B. OV-Abend)
+        an eine konfigurierte Gruppe – X Tage/Stunden vorher und/oder zum Terminzeitpunkt.
+    </p>
+
+    @foreach (var entry in Entries)
+    {
+        var localEntry = entry;
+        <div class="card mb-3 border @(localEntry.Enabled ? "border-secondary" : "border-light")">
+            <div class="card-header d-flex justify-content-between align-items-center py-1 px-2">
+                <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox"
+                           checked="@localEntry.Enabled"
+                           @onchange="e => localEntry.Enabled = (bool)(e.Value ?? false)" />
+                    <label class="form-check-label fw-semibold">
+                        @(string.IsNullOrWhiteSpace(localEntry.Title) ? "(kein Titel)" : localEntry.Title)
+                    </label>
+                </div>
+                <button class="btn btn-sm btn-outline-danger py-0" @onclick="() => Remove(localEntry)" title="Eintrag löschen">🗑</button>
+            </div>
+            <div class="card-body py-2 px-2">
+                <div class="row g-2">
+
+                    @* Titel *@
+                    <div class="col-12 col-md-6">
+                        <label class="form-label mb-0 small">Bezeichnung</label>
+                        <input class="form-control form-control-sm" placeholder="z. B. OV-Abend K01"
+                               @bind="localEntry.Title" />
+                    </div>
+
+                    @* Zielgruppe *@
+                    <div class="col-12 col-md-6">
+                        <label class="form-label mb-0 small">Gruppe</label>
+                        <input class="form-control form-control-sm" placeholder="#262"
+                               @bind="localEntry.Group" />
+                    </div>
+
+                    @* Text *@
+                    <div class="col-12">
+                        <label class="form-label mb-0 small">
+                            Nachrichtentext
+                            <span class="text-muted">({title}, {event_date}, {event_time}, {days_until}, {hours_until})</span>
+                        </label>
+                        <input class="form-control form-control-sm"
+                               placeholder="z. B. 📅 {title} am {event_date} um {event_time} Uhr – in {days_until} Tagen!"
+                               @bind="localEntry.Text" />
+                    </div>
+
+                    @* Wiederholungstyp *@
+                    <div class="col-12 col-md-4">
+                        <label class="form-label mb-0 small">Wiederholung</label>
+                        <select class="form-select form-select-sm"
+                                value="@localEntry.RecurrenceType.ToString()"
+                                @onchange="e => localEntry.RecurrenceType = Enum.Parse<CalendarRecurrence>(e.Value!.ToString()!)">
+                            <option value="Once">Einmalig</option>
+                            <option value="Weekly">Wöchentlich</option>
+                            <option value="BiWeekly">Zweiwöchentlich</option>
+                            <option value="Monthly">Monatlich (fester Tag)</option>
+                            <option value="NthWeekday">N-ter Wochentag</option>
+                            <option value="LastWeekday">Letzter Wochentag</option>
+                        </select>
+                    </div>
+
+                    @* Uhrzeit *@
+                    <div class="col-6 col-md-2">
+                        <label class="form-label mb-0 small">Uhrzeit</label>
+                        <input class="form-control form-control-sm" type="time"
+                               value="@localEntry.EventTime"
+                               @onchange="e => localEntry.EventTime = e.Value?.ToString() ?? localEntry.EventTime" />
+                    </div>
+
+                    @* Wochentag – nur bei Weekly / BiWeekly / NthWeekday / LastWeekday *@
+                    @if (localEntry.RecurrenceType is CalendarRecurrence.Weekly
+                                                   or CalendarRecurrence.BiWeekly
+                                                   or CalendarRecurrence.NthWeekday
+                                                   or CalendarRecurrence.LastWeekday)
+                    {
+                        <div class="col-6 col-md-3">
+                            <label class="form-label mb-0 small">Wochentag</label>
+                            <select class="form-select form-select-sm"
+                                    value="@((int)localEntry.EventDayOfWeek)"
+                                    @onchange="e => localEntry.EventDayOfWeek = (DayOfWeek)int.Parse(e.Value!.ToString()!)">
+                                <option value="1">Montag</option>
+                                <option value="2">Dienstag</option>
+                                <option value="3">Mittwoch</option>
+                                <option value="4">Donnerstag</option>
+                                <option value="5">Freitag</option>
+                                <option value="6">Samstag</option>
+                                <option value="0">Sonntag</option>
+                            </select>
+                        </div>
+                    }
+
+                    @* N-ter Wochentag *@
+                    @if (localEntry.RecurrenceType == CalendarRecurrence.NthWeekday)
+                    {
+                        <div class="col-6 col-md-2">
+                            <label class="form-label mb-0 small">Welcher?</label>
+                            <select class="form-select form-select-sm"
+                                    value="@localEntry.WeekdayOrdinal"
+                                    @onchange="e => localEntry.WeekdayOrdinal = int.Parse(e.Value!.ToString()!)">
+                                <option value="1">1. (erster)</option>
+                                <option value="2">2. (zweiter)</option>
+                                <option value="3">3. (dritter)</option>
+                                <option value="4">4. (vierter)</option>
+                                <option value="5">5. (fünfter)</option>
+                            </select>
+                        </div>
+                    }
+
+                    @* Monatstag – nur bei Monthly *@
+                    @if (localEntry.RecurrenceType == CalendarRecurrence.Monthly)
+                    {
+                        <div class="col-6 col-md-2">
+                            <label class="form-label mb-0 small">Tag im Monat</label>
+                            <input class="form-control form-control-sm" type="number" min="1" max="31"
+                                   @bind="localEntry.EventDayOfMonth" />
+                        </div>
+                    }
+
+                    @* Referenzdatum – nur bei Once und BiWeekly *@
+                    @if (localEntry.RecurrenceType is CalendarRecurrence.Once
+                                                    or CalendarRecurrence.BiWeekly)
+                    {
+                        <div class="col-6 col-md-3">
+                            <label class="form-label mb-0 small">
+                                @(localEntry.RecurrenceType == CalendarRecurrence.Once ? "Datum" : "Anker-Datum")
+                            </label>
+                            <input class="form-control form-control-sm" type="date"
+                                   value="@localEntry.ReferenceDate"
+                                   @onchange="e => localEntry.ReferenceDate = e.Value?.ToString()" />
+                        </div>
+                    }
+
+                    @* Ankündigungs-Optionen *@
+                    <div class="col-12">
+                        <label class="form-label mb-0 small">Ankündigungen senden</label>
+                        <div class="d-flex flex-wrap gap-3 mt-1">
+
+                            <div class="d-flex align-items-center gap-1">
+                                <input type="number" class="form-control form-control-sm" style="width:65px" min="0" max="30"
+                                       @bind="localEntry.AnnounceLeadDays" />
+                                <span class="small text-nowrap">Tage vorher</span>
+                                <span class="text-muted small">(0 = deaktiviert)</span>
+                            </div>
+
+                            <div class="d-flex align-items-center gap-1">
+                                <input type="number" class="form-control form-control-sm" style="width:65px" min="0" max="168"
+                                       @bind="localEntry.AnnounceLeadHours" />
+                                <span class="small text-nowrap">Stunden vorher</span>
+                                <span class="text-muted small">(0 = deaktiviert)</span>
+                            </div>
+
+                            <div class="form-check mb-0 d-flex align-items-center gap-1">
+                                <input class="form-check-input" type="checkbox"
+                                       checked="@localEntry.AnnounceAtEvent"
+                                       @onchange="e => localEntry.AnnounceAtEvent = (bool)(e.Value ?? false)" />
+                                <label class="form-check-label small">Zum Terminzeitpunkt senden</label>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    @* Vorschau nächster Termin *@
+                    <div class="col-12">
+                        @{
+                            var preview = GetNextPreview(localEntry);
+                        }
+                        @if (preview is not null)
+                        {
+                            <div class="alert alert-info py-1 px-2 mb-0 small">
+                                📅 Nächster Termin: <strong>@preview</strong>
+                            </div>
+                        }
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    }
+
+    <button class="btn btn-sm btn-outline-primary" @onclick="AddEntry">➕ Termin-Bake hinzufügen</button>
+</div>
+
+@code {
+    [Parameter] public List<CalendarBeaconEntry> Entries { get; set; } = [];
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    private void AddEntry()
+    {
+        Entries.Add(new CalendarBeaconEntry());
+        OnChanged.InvokeAsync();
+    }
+
+    private void Remove(CalendarBeaconEntry entry)
+    {
+        Entries.Remove(entry);
+        OnChanged.InvokeAsync();
+    }
+
+    private string? GetNextPreview(CalendarBeaconEntry entry)
+    {
+        try
+        {
+            var today = DateOnly.FromDateTime(DateTime.Now);
+            var next  = CalendarBeaconService.GetNextOccurrence(entry, today);
+            if (next == DateOnly.MaxValue) return null;
+            var eventDt = next.ToDateTime(entry.EventTimeParsed);
+            return $"{eventDt:dd.MM.yyyy} um {entry.EventTime} Uhr";
+        }
+        catch { return null; }
+    }
+}

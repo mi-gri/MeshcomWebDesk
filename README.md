@@ -1,4 +1,4 @@
-﻿```
+```
   ███╗   ███╗███████╗███████╗██╗  ██╗ ██████╗ ██████╗ ███╗   ███╗
   ████╗ ████║██╔════╝██╔════╝██║  ██║██╔════╝██╔═══██╗████╗ ████║
   ██╔████╔██║█████╗  ███████╗███████║██║     ██║   ██║██╔████╔██║
@@ -84,6 +84,8 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 ![MeshCom Live Map](docs/Screenshot_Map.png)
 
 ![Terminal Startup Banner](docs/Screenshot_shell.png)
+
+![Console Command Helper mit Spektrum-Scan](docs/Console_Command_Helper.png)
 
 ---
 
@@ -276,6 +278,25 @@ This is particularly useful when the node is **not physically accessible** via U
 
 ---
 
+### 🎛️ Console Command Helper
+
+The **Console Command Helper** (`/console-commands`) provides a graphical interface for reading and setting MeshCom node parameters – without having to remember or type raw console commands.
+
+- **Live status display** – reads current parameter values from the connected node on demand via the **🔄 Refresh** button
+- **Grouped cards** – commands are organised by category (e.g. Network, LoRa, System) with collapsible group panels and an item counter
+- **Command types supported:**
+  - **Toggle** – on/off switch (e.g. `--lora-tx-enable`); card colour reflects the current state
+  - **Value** – numeric input or dropdown for commands with a fixed option list; includes unit hint
+  - **Text** – free-text input; IP-address fields offer a 📍 picker to select a detected local interface address
+  - **Action** – sends a command immediately; critical commands (e.g. reboot, OTA) require a confirmation dialog
+- **Spectrum chart** – when the node returns a spectrum scan, the result is displayed as an inline chart (`SpectrumChart`)
+- **Mini console popup** – a lightweight console overlay is accessible directly from the helper page for quick manual commands
+- **Connection state badge** – a clear ⚠ indicator when the node is not connected; all send buttons are disabled automatically
+- **Toast notifications** – brief on-screen feedback after each command is sent or an error occurs
+- Requires an active **TLS or Serial console connection** (configure in Settings → 🖥️ Console)
+
+---
+
 ### 📡 Beacon (Bake)
 - **Periodic beacon** – sends a configurable text to a configurable group at a fixed interval
 - Interval is configurable in whole hours (minimum **8 h**); existing values below 8 h are automatically corrected on load; first transmission after **one full interval** (no send on every restart)
@@ -284,6 +305,24 @@ This is particularly useful when the node is **not physically accessible** via U
 - **Status indicator** in the status bar: pulsing `●` dot with next scheduled send time; turns yellow when < 10 min away
 - Beacon appears in the monitor feed and in the corresponding group chat tab
 - **"Send Beacon Now"** test button in Settings – sends the beacon immediately without waiting for the interval
+
+### 📅 Calendar Beacon (Scheduled Event Announcements)
+
+Automatically announces recurring events (e.g. club meetings) to a configured group – ahead of time and/or at the exact event time.
+
+- **Multiple entries** – any number of event beacons can be defined; each can be enabled/disabled individually
+- **Recurrence types:**
+  - **Once** – single event on a specific date
+  - **Weekly** – every week on a selected weekday
+  - **Bi-weekly** – every two weeks, anchored to a reference date
+  - **Monthly** – fixed day of month (e.g. every 15th)
+  - **Nth weekday** – e.g. 2nd Tuesday of the month
+  - **Last weekday** – e.g. last Friday of the month
+- **Announcement timing** – configurable lead time in days and/or hours before the event; optionally also at the exact event time
+- **Message placeholders:** `{title}`, `{event_date}`, `{event_time}`, `{days_until}`, `{hours_until}`  
+  Example: `📅 {title} on {event_date} at {event_time} – in {days_until} days!`
+- **Next occurrence preview** – Settings shows a live preview of the next calculated send date
+- Configured in **Settings → 📡 Beacon → Calendar Beacon**
 
 ### ↩️ Auto-Reply
 - Sends a configurable reply text automatically when a **brand-new direct chat tab** is opened by an incoming message (first contact from a callsign)
@@ -1390,9 +1429,12 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 
  ## 📋 Changelog
 
-### v1.11.1 *(in development)*
+ ### v1.12.0
+ - **feat:** 📅 **Calendar Beacon** – scheduled event announcements sent automatically to a configured group before and/or at the event time
+ - **feat:** 🖥️ **Console Command Helper** – graphical assistant for reading and setting MeshCom node parameters without typing raw console commands
+ - **fix:** 🔧 **Optimisations & Bug Fixes** – various improvements to stability and performance
 
-### v1.11.0 → [Full release notes](docs/release-notes/v1.11.0.md)
+ ### v1.11.0
 - **feat:** 🌤️ **Weather API** – Live weather data from external providers usable as telemetry fields
   - **AWEKAS** (`https://api.awekas.at/current.php?key=...`) and **Weather Underground** supported
   - **Simulation provider**: offline test mode without API key (file-based or random values)
@@ -1410,8 +1452,6 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 - **fix:** 🔐 **API key field empty on load** – password/key fields are never pre-filled; saving with an empty field preserves the existing encrypted value
 - **fix:** 🔧 **Build no longer overwrites runtime data** – `data/**` is no longer copied to `bin/Debug` during build
 - **fix:** 🔊 **Speaker icon** – state preserved after chat page reload
-
-### v1.10.4 *(in development)*
 
 ### v1.10.3
 - **fix:** 🐛 **Chat crash on tab click** – `ArgumentNullException` when opening the Chat page fixed; caused by a tab with `Key = null` created from an incoming UDP packet without a `From` field; from v1.10.2 onwards this tab was permanently persisted via server-side tab persistence

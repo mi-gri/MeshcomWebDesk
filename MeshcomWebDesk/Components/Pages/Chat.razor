@@ -166,11 +166,8 @@
                             }
                             else
                             {
-                                var msgFn = QrzFirstName(msg.From);
                                 <span class="msg-call-group">
-                                    <span class="msg-call msg-call-link"
-                                          @onclick="() => OpenTabFromMonitor(msg.From)"
-                                          title="@(Loc.T($"Chat mit {msg.From} öffnen", $"Open chat with {msg.From}") + QrzSuffix(msg.From))">@msg.From@if (msgFn is not null){<span class="qrz-badge"> · @msgFn</span>}:</span>
+                                    <CallsignPopup Callsign="@msg.From" OnOpenChat="cs => OpenTabFromMonitor(cs)" />:
                                     <button class="btn-mention" @onclick="() => InsertMentionAsync(msg.From)" title="@MentionTitle(msg.From)">&#64;</button>
                                 </span>
                             }
@@ -251,21 +248,19 @@
 
                     @* Routing: From [⟶ Relay1 ⟶ Relay2 …] → To *@
                     @if (!string.IsNullOrEmpty(m.From))
-                    {
-                        <span class="mon-routing">
-                            @if (!string.Equals(m.From, _myCallsign, StringComparison.OrdinalIgnoreCase))
                             {
-                                var monFn = QrzFirstName(m.From);
-                                <span class="mon-call-group">
-                                    <span class="mon-call mon-call-link" @onclick="() => OpenTabFromMonitor(m.From)"
-                                          title="@(Loc.T($"Chat mit {m.From} öffnen", $"Open chat with {m.From}") + QrzSuffix(m.From))">@m.From@if (monFn is not null){<span class="qrz-badge"> · @monFn</span>}</span>
-                                    <button class="btn-mention" @onclick="() => InsertMentionAsync(m.From)" title="@MentionTitle(m.From)">&#64;</button>
-                                </span>
-                            }
-                            else
-                            {
-                                <span class="mon-call">@m.From</span>
-                            }
+                                <span class="mon-routing">
+                                    @if (!string.Equals(m.From, _myCallsign, StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        <span class="mon-call-group">
+                                            <CallsignPopup Callsign="@m.From" OnOpenChat="cs => OpenTabFromMonitor(cs)" />
+                                            <button class="btn-mention" @onclick="() => InsertMentionAsync(m.From)" title="@MentionTitle(m.From)">&#64;</button>
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="mon-call">@m.From</span>
+                                    }
                             @* Show each relay hop inline *@
                             @if (m.RelayPath != null)
                             {
@@ -285,9 +280,15 @@
                                 else if (!string.Equals(m.To, _myCallsign, StringComparison.OrdinalIgnoreCase))
                                 {
                                     var grpLabel = ChatService.GetGroupLabel(m.To);
-                                    var destDisplay = FormatDest(m.To);
-                                    <span class="mon-call mon-call-link" @onclick="() => OpenTabFromMonitor(m.To)"
-                                          title="@(grpLabel is not null ? grpLabel.Label : Loc.T($"Chat mit {m.To} öffnen", $"Open chat with {m.To}") + QrzSuffix(m.To))">@destDisplay@if (grpLabel is not null){<span class="qrz-badge"> · @grpLabel.ShortLabel</span>}</span>
+                                    @if (grpLabel is not null)
+                                    {
+                                        <span class="mon-call mon-call-link" @onclick="() => OpenTabFromMonitor(m.To)"
+                                              title="@grpLabel.Label">@FormatDest(m.To)<span class="qrz-badge"> · @grpLabel.ShortLabel</span></span>
+                                    }
+                                    else
+                                    {
+                                        <CallsignPopup Callsign="@m.To" OnOpenChat="cs => OpenTabFromMonitor(cs)" />
+                                    }
                                 }
                                 else
                                 {
@@ -1100,31 +1101,6 @@
 
             if (needsRender)
                 StateHasChanged();
-
-            // Check if welcome dialog should be shown.
-            // The dialog is triggered only on a new Major version (e.g. 1.x → 2.x).
-            // The storage key contains only the Major part so patch and minor updates
-            // do NOT re-trigger the dialog.
-            try
-            {
-                var majorKey = typeof(Chat).Assembly.GetName().Version is { } ver
-                    ? ver.Major.ToString()
-                    : _appVersion;
-
-                var welcomed = await JS.InvokeAsync<string>("meshcomChat.getWelcomedVersion");
-                if (welcomed != majorKey)
-                {
-                    await Task.Delay(3000);
-                    var txtQuestion = Loc.T(
-                        "Gefällt dir MeshComWebDesk? Dann spendier mir für die viele Arbeit einen Kaffee! 😊",
-                        "Do you like MeshComWebDesk? Then buy me a coffee for all the hard work! 😊");
-                    var txtYes = Loc.T("Ja, gerne!", "Yes, with pleasure!");
-                    var txtNo = Loc.T("Nein, so gut ist es auch nicht", "No, it's not that good");
-                    var author = "© Ralf Altenbrand (DH1FR) · dh1fr@darc.de";
-                    await JS.InvokeVoidAsync("meshcomChat.showWelcomeDialog", _appVersion, majorKey, txtQuestion, txtYes, txtNo, author);
-                }
-            }
-            catch { }
         }
 
         if (_scrollMessages)
