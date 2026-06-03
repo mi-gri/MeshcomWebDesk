@@ -3252,6 +3252,28 @@ details[open] .cch-group-title::before { transform: rotate(90deg); }
 }
 .cch-card-action { margin-top: .15rem; }
 
+.cch-batt-wrap {
+    margin-top: .1rem;
+}
+
+.cch-batt-bar {
+    width: 100%;
+    height: .5rem;
+    border-radius: 999px;
+    background: #21262d;
+    border: 1px solid #30363d;
+    overflow: hidden;
+}
+
+.cch-batt-fill {
+    height: 100%;
+    transition: width .2s ease;
+}
+
+.cch-batt-fill-low  { background: linear-gradient(90deg, #f85149, #ff7b72); }
+.cch-batt-fill-mid  { background: linear-gradient(90deg, #d29922, #f2cc60); }
+.cch-batt-fill-high { background: linear-gradient(90deg, #238636, #3fb950); }
+
 /* iOS-style toggle */
 .cch-toggle-btn {
     display: inline-flex;
