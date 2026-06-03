@@ -54,12 +54,18 @@
         System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? string.Empty;
 
     private void OnLocChange() => _ = InvokeAsync(StateHasChanged);
+    private void OnLicenseChange() => _ = InvokeAsync(StateHasChanged);
 
     protected override void OnInitialized()
     {
-        Loc.OnChange += OnLocChange;
+        Loc.OnChange     += OnLocChange;
+        LicenseService.OnLicenseChanged += OnLicenseChange;
         SettingsMon.OnChange((settings, name) => InvokeAsync(StateHasChanged));
     }
 
-    public void Dispose() => Loc.OnChange -= OnLocChange;
+    public void Dispose()
+    {
+        Loc.OnChange -= OnLocChange;
+        LicenseService.OnLicenseChanged -= OnLicenseChange;
+    }
 }
