@@ -1392,12 +1392,10 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 
  ## 📋 Changelog
 
- ### v1.12.0 *(in development)*
+ ### v1.12.0
  - **feat:** 📅 **Termin Beacon** – Kalender-Beacon-Funktion für zeitgesteuerte Aussendungen
  - **feat:** 🖥️ **Console Command Helper** – interaktiver Assistent zur Erstellung und Verwaltung von Konsolenbefehlen
  - **fix:** 🔧 **Optimierungen und Bug Fixes** – diverse Verbesserungen der Stabilität und Performance
-
- ### v1.11.1 *(in development)*
 
  ### v1.11.0
 - **feat:** 🌤️ **Weather API** – Live weather data from external providers usable as telemetry fields
@@ -1417,8 +1415,6 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 - **fix:** 🔐 **API key field empty on load** – password/key fields are never pre-filled; saving with an empty field preserves the existing encrypted value
 - **fix:** 🔧 **Build no longer overwrites runtime data** – `data/**` is no longer copied to `bin/Debug` during build
 - **fix:** 🔊 **Speaker icon** – state preserved after chat page reload
-
-### v1.10.4 *(in development)*
 
 ### v1.10.3
 - **fix:** 🐛 **Chat crash on tab click** – `ArgumentNullException` when opening the Chat page fixed; caused by a tab with `Key = null` created from an incoming UDP packet without a `From` field; from v1.10.2 onwards this tab was permanently persisted via server-side tab persistence
