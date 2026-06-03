@@ -51,6 +51,7 @@
     font-weight: 500;
     letter-spacing: 0;
     vertical-align: middle;
+    margin-left: 8px;
 }
 
 .app-license-badge--licensed {

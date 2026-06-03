@@ -247,6 +247,43 @@ internal static class It
         ["Send now"]                = "Invia ora",
         ["Sending…"]                = "Invio in corso…",
 
+        // Settings – Calendar Beacon
+        ["Calendar Beacon"]         = "Beacon calendario",
+        ["Sends beacon announcements for recurring events (e.\u00a0g. club meetings). Each entry can announce days/hours before and/or at the event time."]
+                                    = "Invia annunci beacon per eventi ricorrenti (es. serate del club). Ogni voce può annunciare giorni/ore prima e/o all'ora dell'evento.",
+        ["Recurrence"]              = "Ricorrenza",
+        ["Once"]                    = "Una volta",
+        ["Weekly"]                  = "Settimanale",
+        ["Bi-weekly"]               = "Bisettimanale",
+        ["Monthly (Day)"]           = "Mensile (giorno)",
+        ["Nth Weekday"]             = "Ennesimo giorno feriale",
+        ["Last Weekday"]            = "Ultimo giorno feriale",
+        ["Day of Week"]             = "Giorno della settimana",
+        ["Monday"]                  = "Lunedì",
+        ["Tuesday"]                 = "Martedì",
+        ["Wednesday"]               = "Mercoledì",
+        ["Thursday"]                = "Giovedì",
+        ["Friday"]                  = "Venerdì",
+        ["Saturday"]                = "Sabato",
+        ["Sunday"]                  = "Domenica",
+        ["Ordinal (1=first…)"]      = "Ordinale (1=primo…)",
+        ["Day of Month"]            = "Giorno del mese",
+        ["Reference Date (anchor)"] = "Data di riferimento (ancora)",
+        ["Announce days before"]    = "Annuncia giorni prima",
+        ["Announce hours before"]   = "Annuncia ore prima",
+        ["Send at event time"]      = "Invia all'ora dell'evento",
+        ["Next event"]              = "Prossimo evento",
+        ["Add Event"]               = "Aggiungi evento",
+        ["Variables:"]              = "Variabili:",
+        ["Title"]                   = "Titolo",
+        ["Inactive"]                = "Inattivo",
+
+        // Console Command Helper
+        ["Status refreshed"]        = "Stato aggiornato",
+        ["Use own IP"]              = "Usa il mio IP",
+        ["Really send command?"]    = "Inviare davvero il comando?",
+        ["Yes, send"]               = "Sì, invia",
+
         // Settings – Auto-Reply
         ["Auto-Reply"]              = "Risposta automatica",
         ["Auto-reply enabled"]      = "Risposta auto abilitata",
