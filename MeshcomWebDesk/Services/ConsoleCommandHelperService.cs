@@ -51,6 +51,14 @@ public sealed class ConsoleCommandHelperService : IDisposable
     /// <summary>Liefert den aktiven Console-Service für direkte Anzeige (z.B. Console-Popup).</summary>
     public IConsoleService ActiveConsolePublic => ActiveConsole;
 
+    /// <summary>Aktueller Spektrum-Scan (wird aus den Console-Zeilen geparsed).</summary>
+    public SpectrumScan SpectrumScan { get; } = new();
+    private readonly object _spectrumLock = new();
+    // Statt einem Index merken wir uns die letzte Zeilenanzahl beim letzten Aufruf.
+    // Da Lines.RemoveAt(0) den Index verschiebt, arbeiten wir mit einem stabilen
+    // Snapshot-Vergleich: wir suchen immer den letzten --spectrum / FREQ Block im Snapshot.
+    private int _spectrumProcessedSnapshotId;  // inkrementiert bei jedem vollständig verarbeiteten Scan
+
     // ── Pending-Command-Tracking ─────────────────────────────────────────
 
     private sealed record PendingCommand(
@@ -214,9 +222,12 @@ public sealed class ConsoleCommandHelperService : IDisposable
 
     private void HandleConsoleChange()
     {
+        // Aktive Console einmalig festhalten – verhindert Wechsel während der Verarbeitung
+        var console = ActiveConsole;
+
         List<string> snapshot;
-        lock (ActiveConsole.Lines)
-            snapshot = [.. ActiveConsole.Lines];
+        lock (console.Lines)
+            snapshot = [.. console.Lines];
 
         // ── 1. PendingCommands auswerten (nur neue Zeilen seit dem Senden) ──
         List<PendingCommand> pendingCopy;
@@ -325,6 +336,97 @@ public sealed class ConsoleCommandHelperService : IDisposable
 
         if (changed)
             OnChange?.Invoke();
+
+        // ── 3. Spektrum-Parser (Snapshot-basiert, robust gegen Lines.RemoveAt) ──
+        bool fireChange = false;
+        lock (_spectrumLock)
+        {
+            List<string> snap;
+            lock (console.Lines)
+                snap = [.. console.Lines];
+
+            // Letzten SCAN END suchen
+            int scanEndIdx = -1;
+            for (int i = snap.Count - 1; i >= 0; i--)
+            {
+                if (snap[i].Trim() == "SCAN END") { scanEndIdx = i; break; }
+            }
+
+            // Block-Hash damit wir denselben fertigen Scan nicht mehrfach verarbeiten
+            int blockHash = scanEndIdx >= 0 ? ComputeBlockHash(snap, scanEndIdx) : 0;
+            if (scanEndIdx >= 0 && blockHash == _spectrumProcessedSnapshotId) return;
+
+            // Scan-Start rückwärts suchen (--spectrum oder erste FREQ-Zeile des letzten Blocks)
+            int limit = scanEndIdx >= 0 ? scanEndIdx : snap.Count - 1;
+            int scanStart = FindScanStart(snap, limit);
+
+            // Block parsen
+            var tempScan = new SpectrumScan();
+            bool active = false;
+            for (int i = scanStart; i <= limit; i++)
+            {
+                var line = snap[i];
+                if (line.Trim() == "--spectrum")
+                {
+                    tempScan.Reset(); active = true; continue;
+                }
+                if (line.StartsWith("FREQ ") && !active)
+                {
+                    tempScan.Reset(); active = true;
+                }
+                if (active) tempScan.Feed(line);
+            }
+
+            // Nur übernehmen wenn mindestens ein Punkt vorhanden
+            if (tempScan.Points.Count > 0)
+            {
+                SpectrumScan.Reset();
+                foreach (var pt in tempScan.Points)
+                    SpectrumScan.AddPoint(pt);
+
+                if (scanEndIdx >= 0)
+                {
+                    SpectrumScan.MarkComplete();
+                    _spectrumProcessedSnapshotId = blockHash;
+                    fireChange = true;
+                }
+                else
+                {
+                    // Zwischenstand: kein OnChange – HandleChange feuert sowieso weiter
+                }
+            }
+        }
+        if (fireChange)
+            OnChange?.Invoke();
+    }
+
+    private static int FindScanStart(List<string> lines, int upToIdx)
+    {
+        // Letztes --spectrum vor upToIdx suchen
+        for (int i = upToIdx; i >= 0; i--)
+            if (lines[i].Trim() == "--spectrum") return i;
+        // Fallback: erste FREQ-Zeile des letzten zusammenhängenden Blocks
+        // (rückwärts bis keine FREQ/SCAN/spectral-Zeile mehr)
+        int firstFreq = upToIdx;
+        for (int i = upToIdx; i >= 0; i--)
+        {
+            var l = lines[i];
+            if (l.StartsWith("FREQ ") || l.StartsWith("SCAN ") ||
+                l.Trim() == "SCAN END" || l.Contains("spectral scan"))
+                firstFreq = i;
+            else if (firstFreq < upToIdx && !l.StartsWith("FREQ "))
+                break;
+        }
+        return firstFreq;
+    }
+
+    private static int ComputeBlockHash(List<string> lines, int scanEndIdx)
+    {
+        int start = Math.Max(0, scanEndIdx - 200);
+        int h = 0;
+        for (int i = start; i <= scanEndIdx; i++)
+            h = HashCode.Combine(h, lines[i].GetHashCode());
+        return h;
     }
 
     /// <summary>Setzt CurrentValues[name] = value und gibt true zurück wenn sich etwas geändert hat.</summary>

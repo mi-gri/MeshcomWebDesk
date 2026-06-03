@@ -422,6 +422,8 @@
         if (!_isSerial && !string.IsNullOrEmpty(TelnetService.UnknownCertThumbprint))
             _unknownCertThumbprint = TelnetService.UnknownCertThumbprint;
 
+        // ── Spektrum-Parser entfernt – Anzeige nur im Console Command Helper ──
+
         if (_paused) return;
         InvokeAsync(async () => { StateHasChanged(); await ScrollToBottomAsync(); });
     }
@@ -525,6 +527,14 @@
         if (raw.Contains("RX_DEDUP"))
             return new(raw.Contains("DUP") ? "lora-dim" : "lora-dbg-rx", HighlightKv(esc),
                        raw.Contains("DUP") ? "Duplikat verworfen" : "Neues Paket");
+
+        // ── Spectrum ─────────────────────────────────────────────────────
+        if (raw.StartsWith("FREQ "))
+            return new("lora-dbg", esc, "Spektrum – Frequenz");
+        if (raw.StartsWith("SCAN ") || raw.Trim() == "SCAN END")
+            return new("lora-dim", esc, "Spektrum – Scan-Daten");
+        if (raw.Contains("spectral scan"))
+            return new("lora-dbg", esc, "Spektrum – SX1262");
 
         return new("", esc, "");
     }

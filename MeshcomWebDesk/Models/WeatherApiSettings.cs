@@ -16,12 +16,6 @@ public class WeatherApiSettings
 
     /// <summary>Polling interval in minutes. Minimum 5, default 15.</summary>
     public int PollIntervalMinutes { get; set; } = 15;
-
-    /// <summary>
-    /// License token (base64.signature format).
-    /// Leave empty to run in unlicensed test mode.
-    /// </summary>
-    public string LicenseKey { get; set; } = string.Empty;
 }
 
 /// <summary>Supported weather data providers.</summary>

@@ -5,6 +5,18 @@ internal static class It
 {
     public static readonly Dictionary<string, string> Strings = new(StringComparer.Ordinal)
     {
+        // License
+        ["Licensed for"]                   = "Licenziato per",
+        ["Free unlicensed version"]        = "Versione gratuita non licenziata",
+        ["Free \u2013 License via PayPal?"]       = "Gratuito \u2013 Licenza via PayPal?",
+        ["Get a license: PayPal donation from \u20ac10 \u2192 callsign license key"] = "Ottieni una licenza: donazione PayPal da 10\u20ac \u2192 chiave di licenza per nominativo",
+        ["License"]                        = "Licenza",
+        ["License Token"]                  = "Token di licenza",
+        ["Licensed"]                       = "Licenziato",
+        ["Unlicensed"]                     = "Non licenziato",
+        ["Enter your license token here."] = "Inserisci qui il tuo token di licenza.",
+        ["To obtain a license, send your callsign (without SSID) to DH1FR."] = "Per ottenere una licenza, invia il tuo nominativo (senza SSID) a DH1FR.",
+
         // Chat – ping confirmation
         ["This usually belongs in a direct tab."] = "Di solito appartiene a una scheda diretta.",
 

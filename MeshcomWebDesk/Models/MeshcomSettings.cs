@@ -353,4 +353,13 @@ public class MeshcomSettings
     /// For multi-node TLS/NET mode, ConsoleLogEnabled is set per NodeProfile.
     /// </summary>
     public bool ConsoleLogEnabled { get; set; } = false;
+
+    // ── License ──────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Application license token (base64.signature format).
+    /// Issued by DH1FR after a coffee donation. Leave empty to run unlicensed.
+    /// The token is bound to <see cref="MyCallsign"/> without SSID.
+    /// </summary>
+    public string LicenseToken { get; set; } = string.Empty;
 }

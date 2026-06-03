@@ -3491,3 +3491,37 @@ details[open] .cch-group-title::before { transform: rotate(90deg); }
 .cch-toast-error { background: #b91c1c; color: #fff; max-width: min(480px, 90vw); white-space: normal; text-align: center; }
 
 .cch-value-error { background: #3d1f1f; color: #f85149; border: 1px solid #f8514966; }
+
+/* ── Spectrum Chart ──────────────────────────────────────────────────────── */
+.spectrum-chart-wrap {
+    margin: .6rem .4rem;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: .5rem .6rem .4rem;
+}
+.spectrum-chart-title {
+    font-size: .82rem;
+    color: #8b949e;
+    margin-bottom: .3rem;
+    font-weight: 600;
+    letter-spacing: .03em;
+}
+.spectrum-chart-scroll {
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+.spectrum-svg {
+    display: block;
+}
+.spectrum-chart-legend {
+    font-size: .75rem;
+    color: #8b949e;
+    margin-top: .35rem;
+}
+.spectrum-txfreq-hint {
+    font-size: .78rem;
+    color: #8b949e;
+    margin-left: .5rem;
+    font-weight: normal;
+}

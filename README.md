@@ -1,4 +1,4 @@
-﻿```
+```
   ███╗   ███╗███████╗███████╗██╗  ██╗ ██████╗ ██████╗ ███╗   ███╗
   ████╗ ████║██╔════╝██╔════╝██║  ██║██╔════╝██╔═══██╗████╗ ████║
   ██╔████╔██║█████╗  ███████╗███████║██║     ██║   ██║██╔████╔██║
@@ -84,6 +84,8 @@ The application runs on **Windows** or **Linux** and makes a full web client for
 ![MeshCom Live Map](docs/Screenshot_Map.png)
 
 ![Terminal Startup Banner](docs/Screenshot_shell.png)
+
+![Console Command Helper mit Spektrum-Scan](docs/Console_Command_Helper.png)
 
 ---
 

@@ -159,6 +159,12 @@
         }
     </div>
 
+    @* ── Spektrum-Chart ── *@
+    @if (CmdHelper.SpectrumScan.Points.Count > 0)
+    {
+        <SpectrumChart Scan="CmdHelper.SpectrumScan" TxFreqMhz="@GetTxFreqMhz()" />
+    }
+
     @* ── Bestätigungs-Dialog ── *@
     @if (_confirmCmd is not null)
     {
@@ -365,6 +371,17 @@
             _ = InvokeAsync(StateHasChanged);
         }, null, isError ? 5000 : 2500, Timeout.Infinite);
         StateHasChanged();
+    }
+
+    private double? GetTxFreqMhz()
+    {
+        if (CmdHelper.CurrentValues.TryGetValue("txfreq", out var v) &&
+            double.TryParse(v.Replace(',', '.'),
+                System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out var freq))
+            return freq;
+        return null;
     }
 
     private void ToggleIpPicker(string cmdName)

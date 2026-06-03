@@ -207,42 +207,8 @@ window.meshcomChat = (function () {
             localStorage.setItem('meshcom-tab-order', JSON.stringify(keys || [])),
         getSettingsSections: () => localStorage.getItem('meshcom-settings-sections'),
         setSettingsSections: (csv) => localStorage.setItem('meshcom-settings-sections', csv ?? ''),
-        getWelcomedVersion:  () => localStorage.getItem('meshcom-welcomed-version') || '',
-        setWelcomedVersion:  (v) => localStorage.setItem('meshcom-welcomed-version', v || ''),
         getLoraHighlight:    () => localStorage.getItem('meshcom-lora-highlight') === '1',
         setLoraHighlight:    (v) => localStorage.setItem('meshcom-lora-highlight', v ? '1' : '0'),
-        showWelcomeDialog:   (version, storageKey, txtQuestion, txtYes, txtNo, author) => {
-            if (document.getElementById('welcome-dialog-overlay')) return;
-            var overlay = document.createElement('div');
-            overlay.id = 'welcome-dialog-overlay';
-            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:99999;display:flex;align-items:center;justify-content:center';
-            overlay.innerHTML =
-                '<div style="background:#161b22;border:2px solid #58a6ff;border-radius:12px;padding:2rem;max-width:400px;text-align:center;color:#c9d1d9;font-family:inherit">' +
-                '<div style="font-size:3rem">☕</div>' +
-                '<h2 style="color:#a0c4ff;margin:0.5rem 0">MeshCom WebDesk v' + version + '</h2>' +
-                '<p style="color:#a0c4ff;margin:0.5rem 0;line-height:1.5">' + txtQuestion + '</p>' +
-                '<p style="font-size:0.8rem;color:#8b949e;margin:0.5rem 0">' + author + '</p>' +
-                '<div style="display:flex;flex-direction:column;gap:0.5rem;margin-top:1rem">' +
-                '<button id="welcome-btn-coffee" style="background:#f8c31b;color:#000;border:none;border-radius:8px;padding:0.65rem;font-weight:700;cursor:pointer;font-size:1rem">☕ Buy me a Coffee</button>' +
-                '<button id="welcome-btn-paypal" style="background:#003087;color:#fff;border:none;border-radius:8px;padding:0.65rem;font-weight:700;cursor:pointer;font-size:1rem">💳 PayPal · paypal.me/DH1FR</button>' +
-                '<button id="welcome-btn-no" style="background:#21262d;color:#8b949e;border:1px solid #30363d;border-radius:8px;padding:0.55rem;cursor:pointer">😐 ' + txtNo + '</button>' +
-                '</div></div>';
-            document.body.appendChild(overlay);
-            function dismiss() {
-                localStorage.setItem('meshcom-welcomed-version', storageKey);
-                overlay.remove();
-            }
-            overlay.querySelector('#welcome-btn-coffee').addEventListener('click', function() {
-                dismiss();
-                window.open('https://www.buymeacoffee.com/dh1fr', '_blank');
-            });
-            overlay.querySelector('#welcome-btn-paypal').addEventListener('click', function() {
-                dismiss();
-                window.open('https://paypal.me/DH1FR', '_blank');
-            });
-            overlay.querySelector('#welcome-btn-no').addEventListener('click', dismiss);
-            overlay.addEventListener('click', function(e) { if (e.target === overlay) dismiss(); });
-        },
 
         // ── Nachricht in Zwischenablage kopieren ──
         copyToClipboard: (text) => {

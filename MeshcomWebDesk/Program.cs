@@ -138,7 +138,7 @@ builder.Services.AddHttpClient("WeatherApi").ConfigurePrimaryHttpMessageHandler(
 builder.Services.AddSingleton<MeshcomWebDesk.Services.Weather.AwekasProvider>();
 builder.Services.AddSingleton<MeshcomWebDesk.Services.Weather.WUndergroundProvider>();
 builder.Services.AddSingleton<MeshcomWebDesk.Services.Weather.SimulationProvider>();
-builder.Services.AddSingleton<MeshcomWebDesk.Services.WeatherLicenseService>();
+builder.Services.AddSingleton<MeshcomWebDesk.Services.AppLicenseService>();
 builder.Services.AddSingleton<MeshcomWebDesk.Services.WeatherApiPollingService>();
 builder.Services.AddSingleton<GatewayService>();
 builder.Services.AddSingleton<NodeManager>();

@@ -15,7 +15,7 @@ public sealed class WeatherApiPollingService : IHostedService, IAsyncDisposable
     private static readonly TimeSpan MinInterval = TimeSpan.FromMinutes(5);
 
     private readonly IOptionsMonitor<MeshcomSettings> _settings;
-    private readonly WeatherLicenseService            _licenseService;
+    private readonly AppLicenseService                _licenseService;
     private readonly AwekasProvider                   _awekasProvider;
     private readonly WUndergroundProvider             _wuProvider;
     private readonly SimulationProvider               _simProvider;
@@ -32,12 +32,9 @@ public sealed class WeatherApiPollingService : IHostedService, IAsyncDisposable
     /// <summary>Last error message, or null if the last fetch was successful.</summary>
     public string? LastError { get; private set; }
 
-    /// <summary>Whether the current license is valid.</summary>
-    public bool IsLicensed { get; private set; }
-
     public WeatherApiPollingService(
         IOptionsMonitor<MeshcomSettings> settings,
-        WeatherLicenseService licenseService,
+        AppLicenseService licenseService,
         AwekasProvider awekasProvider,
         WUndergroundProvider wuProvider,
         SimulationProvider simProvider,
@@ -108,8 +105,8 @@ public sealed class WeatherApiPollingService : IHostedService, IAsyncDisposable
 
     internal async Task PollAsync(WeatherApiSettings s, CancellationToken ct)
     {
-        // Lizenzprüfung deaktiviert – alle Provider sind freigegeben
-        IsLicensed = true;
+        // Wetter-API ist für alle freigegeben (kein gesondertes Feature-Flag).
+        // Für zukünftige Einschränkung: _licenseService.HasFeature("WeatherApi")
 
         IWeatherProvider provider = s.Provider switch
         {
@@ -119,7 +116,7 @@ public sealed class WeatherApiPollingService : IHostedService, IAsyncDisposable
             _                            => throw new InvalidOperationException($"Unknown provider: {s.Provider}")
         };
 
-        _logger.LogDebug("WeatherApi polling {Provider} (licensed={Licensed})", provider.Name, IsLicensed);
+        _logger.LogDebug("WeatherApi polling {Provider}", provider.Name);
 
         WeatherData? data;
         try

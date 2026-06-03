@@ -18,7 +18,7 @@
 @inject SerialConsoleService SerialConsoleService
 @inject MeshcomWebDesk.Models.ResolvedLogPath ResolvedLogPath
 @inject MeshcomWebDesk.Services.WeatherApiPollingService WeatherPollingService
-@inject MeshcomWebDesk.Services.WeatherLicenseService WeatherLicenseService
+@inject MeshcomWebDesk.Services.AppLicenseService AppLicenseService
 @implements IDisposable
 
 <PageTitle>@Loc.T("Einstellungen", "Settings") – MeshCom WebDesk</PageTitle>
@@ -1249,6 +1249,39 @@
             }
         </div>
 
+        <!-- Lizenz / License -->
+        <div class="settings-section @(IsOpen("license") ? "" : "settings-section-collapsed")">
+            <h2 class="settings-section-title" @onclick='() => Toggle("license")'>🔑 @Loc.T("Lizenz", "License") <span class="section-chevron">@(IsOpen("license") ? "▲" : "▼")</span></h2>
+            @if (IsOpen("license")) {
+            <div class="settings-notice" style="background:#1a2535;border-color:#3a5a8a;margin-bottom:0.75rem">
+                ℹ️ @Loc.T(
+                    "Um eine Lizenz zu erhalten, sende dein Rufzeichen (ohne SSID, z.\u00a0B. DH1FR) per E-Mail an DH1FR. Wer einen Kaffee ausgibt, bekommt einen Lizenzschlüssel. Die Lizenz ändert den Titelbereich. Alle Funktionen sind auch ohne Lizenz kostenlos verfügbar.",
+                    "To obtain a license, send your callsign (without SSID, e.\u00a0g. DH1FR) by e-mail to DH1FR. Buy a coffee and get a license key. The license changes the title area. All features are available free of charge even without a license.")
+            </div>
+            <div class="settings-grid">
+                <label>@Loc.T("Status", "Status")</label>
+                <div>
+                    @if (AppLicenseService.IsLicensed)
+                    {
+                        <span style="color:#3fb950">✅ @Loc.T("Lizenziert für", "Licensed for") <strong>@AppLicenseService.LicensedCallsign</strong></span>
+                    }
+                    else
+                    {
+                        <span style="color:#8b949e">🔓 @Loc.T("Kostenfreie unlizenzierte Version", "Free unlicensed version")</span>
+                    }
+                </div>
+
+                <label>
+                    @Loc.T("Lizenzschlüssel", "License Token")<br />
+                    <small>@Loc.T("Eingabe hier.", "Enter your license token here.")</small>
+                </label>
+                <input type="password" autocomplete="off"
+                       @bind="_model.LicenseToken"
+                       placeholder="@Loc.T("Lizenzschlüssel einfügen…", "Paste license token…")" />
+            </div>
+            }
+        </div>
+
         <!-- Sprache / Language -->
         <div class="settings-section @(IsOpen("lang") ? "" : "settings-section-collapsed")">
             <h2 class="settings-section-title" @onclick='() => Toggle("lang")'>🌐 @Loc.T("Sprache", "Language") <span class="section-chevron">@(IsOpen("lang") ? "▲" : "▼")</span></h2>
@@ -2071,7 +2104,6 @@
     private string? _beaconResult;
 
     // Weather API
-    private bool    _weatherApiLicensed;
     private bool    _weatherApiPolling;
     private string? _weatherApiStatus;
 
@@ -2195,13 +2227,11 @@
                 Provider            = _model.WeatherApi.Provider,
                 StationId           = _model.WeatherApi.StationId,
                 PollIntervalMinutes = _model.WeatherApi.PollIntervalMinutes,
-                LicenseKey          = _model.WeatherApi.LicenseKey,
                 ApiKey              = string.IsNullOrEmpty(_model.WeatherApi.ApiKey)
                                         ? liveKey
                                         : _model.WeatherApi.ApiKey
             };
             await WeatherPollingService.PollAsync(pollSettings, CancellationToken.None);
-            _weatherApiLicensed = WeatherPollingService.IsLicensed;
             if (WeatherPollingService.LastData?.Fields is { Count: > 0 } fields)
             {
                 var preview = string.Join(" | ", fields.Take(5).Select(kv => $"{kv.Key}={kv.Value:F1}"));
@@ -2814,11 +2844,9 @@
                 ApiKey             = s.WeatherApi.ApiKey,
                 StationId          = s.WeatherApi.StationId,
                 PollIntervalMinutes= s.WeatherApi.PollIntervalMinutes,
-                LicenseKey         = s.WeatherApi.LicenseKey
-            }
+            },
+            LicenseToken            = s.LicenseToken
         };
-
-        _weatherApiLicensed = WeatherLicenseService.IsLicensed(s.WeatherApi.LicenseKey);
     }
 
     private void OnTelnetChange()
@@ -3506,17 +3534,25 @@
         public List<GroupLabelEntry> GroupLabels { get; set; } = GroupLabelEntry.Defaults.Select(g => new GroupLabelEntry { Group = g.Group, ShortLabel = g.ShortLabel, Label = g.Label }).ToList();
 
         // Weather API
-        public MeshcomWebDesk.Models.WeatherApiSettings WeatherApi { get; set; } = new();        public DatabaseSettings ToDbSettings() => new()
+        public MeshcomWebDesk.Models.WeatherApiSettings WeatherApi { get; set; } = new();
+
+        // License
+        public string LicenseToken { get; set; } = string.Empty;
+
+        public DatabaseSettings ToDbSettings()
         {
-            Provider              = DbProvider,
-            MySqlConnectionString = DbMySqlConnectionString,
-            MySqlTableName        = DbMySqlTableName,
-            InfluxUrl             = DbInfluxUrl,
-            InfluxToken           = DbInfluxToken,
-            InfluxOrg             = DbInfluxOrg,
-            InfluxBucket          = DbInfluxBucket,
-            LogInserts            = DbLogInserts
-        };
+            return new DatabaseSettings
+            {
+                Provider              = DbProvider,
+                MySqlConnectionString = DbMySqlConnectionString,
+                MySqlTableName        = DbMySqlTableName,
+                InfluxUrl             = DbInfluxUrl,
+                InfluxToken           = DbInfluxToken,
+                InfluxOrg             = DbInfluxOrg,
+                InfluxBucket          = DbInfluxBucket,
+                LogInserts            = DbLogInserts
+            };
+        }
 
         public MeshcomSettings ToSettings() => new()
         {
@@ -3633,7 +3669,8 @@
             ConsoleLogEnabled       = ConsoleLogEnabled,
             QuickTexts = QuickTexts,
             GroupLabels = GroupLabels,
-            WeatherApi = WeatherApi
+            WeatherApi = WeatherApi,
+            LicenseToken = LicenseToken
         };
     }
 }

@@ -1,0 +1,124 @@
+@using MeshcomWebDesk.Models
+
+@if (Scan is not null && Scan.Points.Count > 0)
+{
+    <div class="spectrum-chart-wrap">
+        <div class="spectrum-chart-title">
+            📡 Spektrum-Scan
+            @if (TxFreqMhz.HasValue)
+            {
+                <span class="spectrum-txfreq-hint">
+                    · Node TX: <strong>@TxFreqMhz.Value.ToString("F4", System.Globalization.CultureInfo.InvariantCulture) MHz</strong>
+                    <span style="color:#e67e22">▼</span>
+                    <small style="color:#8b949e">(Spektrum-Achse ≠ TX-Frequenz)</small>
+                </span>
+            }
+        </div>
+        <div class="spectrum-chart-scroll">
+            @((MarkupString)BuildSvg(Scan, TxFreqMhz))
+        </div>
+        <div class="spectrum-chart-legend">
+            <span style="color:#4caf50">■</span> schwach &nbsp;
+            <span style="color:#ffc107">■</span> mittel &nbsp;
+            <span style="color:#f44336">■</span> stark &nbsp;
+            · Max: <strong>@Scan.Points.Max(p => p.Peak)</strong> · @Scan.Points.Count Messpunkte
+            @if (TxFreqMhz.HasValue)
+            {
+                <span>&nbsp;· <span style="color:#e67e22">│</span> = TX @TxFreqMhz.Value.ToString("F4", System.Globalization.CultureInfo.InvariantCulture) MHz</span>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public SpectrumScan? Scan { get; set; }
+
+    /// <summary>Konfigurierte TX-Frequenz des Nodes (--txfreq), optional.</summary>
+    [Parameter]
+    public double? TxFreqMhz { get; set; }
+
+    private static string BuildSvg(SpectrumScan scan, double? txFreq)
+    {
+        var points   = scan.Points;
+        int count    = points.Count;
+        int barW     = 18;
+        int pad      = 3;
+        int svgW     = Math.Max(count * (barW + pad) + pad * 2, 320);
+        int svgH     = 160;
+        int axisH    = 28;
+        int chartH   = svgH - axisH - 8;
+
+        long globalMax = points.Max(p => (long)p.Peak);
+        if (globalMax == 0) globalMax = 1;
+
+        static string BarColor(int peak, long max)
+        {
+            double ratio = (double)peak / max;
+            if (ratio < 0.33) return "#4caf50";
+            if (ratio < 0.66) return "#ffc107";
+            return "#f44336";
+        }
+
+        var sb = new System.Text.StringBuilder();
+        sb.Append($"<svg width=\"{svgW}\" height=\"{svgH}\" xmlns=\"http://www.w3.org/2000/svg\" class=\"spectrum-svg\">");
+
+        // Rasterlinien
+        for (int g = 0; g <= 4; g++)
+        {
+            int gy = 4 + (int)(chartH * g / 4.0);
+            sb.Append($"<line x1=\"0\" y1=\"{gy}\" x2=\"{svgW}\" y2=\"{gy}\" stroke=\"#333\" stroke-width=\"1\"/>");
+        }
+
+        // TX-Frequenz-Markierung als vertikale Linie (nächster Balken zur TX-Freq)
+        if (txFreq.HasValue && points.Count >= 2)
+        {
+            // Nächsten Messpunkt zur TX-Frequenz suchen
+            int closestIdx = 0;
+            double minDist = double.MaxValue;
+            for (int i = 0; i < points.Count; i++)
+            {
+                double d = Math.Abs(points[i].FreqMhz - txFreq.Value);
+                if (d < minDist) { minDist = d; closestIdx = i; }
+            }
+            int mx = closestIdx * (barW + pad) + pad + barW / 2;
+            sb.Append($"<line x1=\"{mx}\" y1=\"0\" x2=\"{mx}\" y2=\"{chartH + 4}\" stroke=\"#e67e22\" stroke-width=\"2\" stroke-dasharray=\"4,3\" opacity=\"0.9\"/>");
+            sb.Append($"<text x=\"{mx + 3}\" y=\"12\" font-size=\"8\" fill=\"#e67e22\">{txFreq.Value.ToString("F3", System.Globalization.CultureInfo.InvariantCulture)}</text>");
+        }
+
+        // Balken + Labels
+        for (int i = 0; i < count; i++)
+        {
+            var pt    = points[i];
+            int barH  = pt.Peak == 0 ? 2 : (int)(chartH * (double)pt.Peak / globalMax);
+            int x     = i * (barW + pad) + pad;
+            int y     = 4 + chartH - barH;
+            string col = BarColor(pt.Peak, globalMax);
+            string freqF2 = pt.FreqMhz.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+            string freqF1 = pt.FreqMhz.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+
+            sb.Append($"<rect x=\"{x}\" y=\"{y}\" width=\"{barW}\" height=\"{barH}\" rx=\"2\" fill=\"{col}\" opacity=\"0.85\">");
+            sb.Append($"<title>{freqF2} MHz – Peak: {pt.Peak}</title>");
+            sb.Append("</rect>");
+
+            // Peak-Wert über Balken
+            if (pt.Peak > 0)
+            {
+                int labelY = Math.Max(y - 3, 10);
+                int cx = x + barW / 2;
+                sb.Append($"<text x=\"{cx}\" y=\"{labelY}\" text-anchor=\"middle\" font-size=\"8\" fill=\"#ccc\">{pt.Peak}</text>");
+            }
+
+            // Frequenz-Label unten, jede 2. Spalte
+            if (i % 2 == 0)
+            {
+                int lx = x + barW / 2;
+                int ly = svgH - 4;
+                sb.Append($"<text x=\"{lx}\" y=\"{ly}\" text-anchor=\"middle\" font-size=\"8\" fill=\"#999\" transform=\"rotate(-35,{lx},{ly})\">{freqF1}</text>");
+            }
+        }
+
+        sb.Append("</svg>");
+        return sb.ToString();
+    }
+}
