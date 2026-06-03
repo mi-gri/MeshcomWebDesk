@@ -278,6 +278,25 @@ This is particularly useful when the node is **not physically accessible** via U
 
 ---
 
+### 🎛️ Console Command Helper
+
+The **Console Command Helper** (`/console-commands`) provides a graphical interface for reading and setting MeshCom node parameters – without having to remember or type raw console commands.
+
+- **Live status display** – reads current parameter values from the connected node on demand via the **🔄 Refresh** button
+- **Grouped cards** – commands are organised by category (e.g. Network, LoRa, System) with collapsible group panels and an item counter
+- **Command types supported:**
+  - **Toggle** – on/off switch (e.g. `--lora-tx-enable`); card colour reflects the current state
+  - **Value** – numeric input or dropdown for commands with a fixed option list; includes unit hint
+  - **Text** – free-text input; IP-address fields offer a 📍 picker to select a detected local interface address
+  - **Action** – sends a command immediately; critical commands (e.g. reboot, OTA) require a confirmation dialog
+- **Spectrum chart** – when the node returns a spectrum scan, the result is displayed as an inline chart (`SpectrumChart`)
+- **Mini console popup** – a lightweight console overlay is accessible directly from the helper page for quick manual commands
+- **Connection state badge** – a clear ⚠ indicator when the node is not connected; all send buttons are disabled automatically
+- **Toast notifications** – brief on-screen feedback after each command is sent or an error occurs
+- Requires an active **TLS or Serial console connection** (configure in Settings → 🖥️ Console)
+
+---
+
 ### 📡 Beacon (Bake)
 - **Periodic beacon** – sends a configurable text to a configurable group at a fixed interval
 - Interval is configurable in whole hours (minimum **8 h**); existing values below 8 h are automatically corrected on load; first transmission after **one full interval** (no send on every restart)
@@ -286,6 +305,24 @@ This is particularly useful when the node is **not physically accessible** via U
 - **Status indicator** in the status bar: pulsing `●` dot with next scheduled send time; turns yellow when < 10 min away
 - Beacon appears in the monitor feed and in the corresponding group chat tab
 - **"Send Beacon Now"** test button in Settings – sends the beacon immediately without waiting for the interval
+
+### 📅 Termin-Baken (Calendar Beacon)
+
+Automatically announces recurring events (e.g. club meetings) to a configured group – ahead of time and/or at the exact event time.
+
+- **Multiple entries** – any number of event beacons can be defined; each can be enabled/disabled individually
+- **Recurrence types:**
+  - **Once** – single event on a specific date
+  - **Weekly** – every week on a selected weekday
+  - **Bi-weekly** – every two weeks, anchored to a reference date
+  - **Monthly** – fixed day of month (e.g. every 15th)
+  - **Nth weekday** – e.g. 2nd Tuesday of the month
+  - **Last weekday** – e.g. last Friday of the month
+- **Announcement timing** – configurable lead time in days and/or hours before the event; optionally also at the exact event time
+- **Message placeholders:** `{title}`, `{event_date}`, `{event_time}`, `{days_until}`, `{hours_until}`  
+  Example: `📅 {title} am {event_date} um {event_time} Uhr – in {days_until} Tagen!`
+- **Next occurrence preview** – Settings shows a live preview of the next calculated send date
+- Configured in **Settings → 📡 Beacon → Termin-Baken**
 
 ### ↩️ Auto-Reply
 - Sends a configurable reply text automatically when a **brand-new direct chat tab** is opened by an incoming message (first contact from a callsign)
