@@ -138,6 +138,9 @@
     .app-version {
         display: none;
     }
+    .app-license-badge--unlicensed {
+        display: none;
+    }
     ::deep .app-nav-link {
         padding: 6px 8px;
     }
