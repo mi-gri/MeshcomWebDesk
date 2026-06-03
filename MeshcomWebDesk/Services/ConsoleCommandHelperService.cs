@@ -70,7 +70,6 @@ public sealed class ConsoleCommandHelperService : IDisposable
     private readonly object _pendingLock = new();
     private readonly List<PendingCommand> _pending = [];
     private IDisposable? _settingsChangeToken;
-    private IConsoleService? _lastActiveConsole;
 
     // Timeout: nach dieser Zeit wird ein PendingCommand ohne Antwort verworfen.
     private static readonly TimeSpan ResponseTimeout = TimeSpan.FromSeconds(4);
