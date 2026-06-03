@@ -78,6 +78,12 @@
     .app-license-text {
         display: none;
     }
+    .app-title--licensed {
+        background: rgba(63, 185, 80, 0.18);
+        border-radius: 4px;
+        padding: 1px 5px;
+        color: #3fb950;
+    }
 }
 
 .app-nav {

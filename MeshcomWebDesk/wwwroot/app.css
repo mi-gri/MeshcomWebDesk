@@ -2231,8 +2231,24 @@ h1:focus {
     padding: 4px 8px;
     font-size: 12px;
     width: 130px;
+    min-width: 0;
     outline: none;
     transition: border-color 0.15s;
+}
+
+@media (max-width: 600px) {
+    .map-controls-bar {
+        flex-wrap: wrap;
+    }
+    .map-search-wrap-ctrl {
+        flex: 1;
+        min-width: 0;
+    }
+    .map-search-input {
+        width: auto;
+        flex: 1;
+        min-width: 0;
+    }
 }
 
 .map-search-input::placeholder { color: #3a5a7a; }
