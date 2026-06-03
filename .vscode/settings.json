@@ -1,0 +1,8 @@
+{
+  "dotnet.defaultSolution": "MeshcomWebDesk.sln",
+  "vssolution.openSolutions.inSettings": true,
+  "vssolution.openSolutions.inRootFolder": true,
+  "vssolution.showMode": "explorer",
+  "debug.onTaskErrors": "showErrors",
+  "debug.openDebug": "openOnSessionStart"
+}

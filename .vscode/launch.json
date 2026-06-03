@@ -1,0 +1,48 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "MeshcomWebDesk (http)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/MeshcomWebDesk/bin/Debug/net10.0/MeshcomWebDesk.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/MeshcomWebDesk",
+      "stopAtEntry": false,
+      "console": "integratedTerminal",
+      "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
+      },
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:5162"
+      }
+    },
+    {
+      "name": "MeshcomWebDesk (https)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/MeshcomWebDesk/bin/Debug/net10.0/MeshcomWebDesk.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/MeshcomWebDesk",
+      "stopAtEntry": false,
+      "console": "integratedTerminal",
+      "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
+      },
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "https://localhost:7276;http://localhost:5162"
+      }
+    },
+    {
+      "name": "MeshcomWebDesk (attach)",
+      "type": "coreclr",
+      "request": "attach"
+    }
+  ]
+}
