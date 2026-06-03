@@ -74,6 +74,12 @@
     border-bottom-color: #ffd166;
 }
 
+@media (max-width: 600px) {
+    .app-license-text {
+        display: none;
+    }
+}
+
 .app-nav {
     display: flex;
     align-items: center;
