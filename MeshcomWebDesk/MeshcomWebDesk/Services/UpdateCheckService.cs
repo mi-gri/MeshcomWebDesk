@@ -4,15 +4,18 @@ using System.Text.Json.Serialization;
 namespace MeshcomWebDesk.Services;
 
 /// <summary>
-/// Checks GitHub Releases once at startup and exposes the latest version string
+/// Checks GitHub Releases at startup and every 24 hours, exposes the latest version string
 /// if it is newer than the running assembly version.
 /// Uses the public GitHub REST API (no auth required for public repos).
 /// </summary>
-public sealed class UpdateCheckService : IHostedService
+public sealed class UpdateCheckService : IHostedService, IDisposable
 {
     private const string ReleaseUrl = "https://api.github.com/repos/DH1FR/MeshcomWebDesk/releases/latest";
+    private static readonly TimeSpan CheckInterval = TimeSpan.FromHours(24);
 
     private readonly ILogger<UpdateCheckService> _logger;
+    private CancellationToken _stoppingToken;
+    private Timer? _timer;
 
     private static readonly Version _current =
         System.Reflection.Assembly.GetExecutingAssembly().GetName().Version ?? new Version(0, 0, 0);
@@ -37,13 +40,24 @@ public sealed class UpdateCheckService : IHostedService
         _logger = logger;
     }
 
-    public async Task StartAsync(CancellationToken cancellationToken)
+    public Task StartAsync(CancellationToken cancellationToken)
     {
-        _ = Task.Run(() => CheckAsync(cancellationToken), cancellationToken);
-        await Task.CompletedTask;
+        _stoppingToken = cancellationToken;
+        _timer = new Timer(
+            _ => _ = CheckAsync(_stoppingToken),
+            null,
+            TimeSpan.Zero,
+            CheckInterval);
+        return Task.CompletedTask;
     }
 
-    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        _timer?.Change(Timeout.Infinite, 0);
+        return Task.CompletedTask;
+    }
+
+    public void Dispose() => _timer?.Dispose();
 
     private async Task CheckAsync(CancellationToken ct)
     {
