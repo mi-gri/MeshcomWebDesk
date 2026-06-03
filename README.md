@@ -306,7 +306,7 @@ The **Console Command Helper** (`/console-commands`) provides a graphical interf
 - Beacon appears in the monitor feed and in the corresponding group chat tab
 - **"Send Beacon Now"** test button in Settings – sends the beacon immediately without waiting for the interval
 
-### 📅 Termin-Baken (Calendar Beacon)
+### 📅 Calendar Beacon (Scheduled Event Announcements)
 
 Automatically announces recurring events (e.g. club meetings) to a configured group – ahead of time and/or at the exact event time.
 
@@ -320,9 +320,9 @@ Automatically announces recurring events (e.g. club meetings) to a configured gr
   - **Last weekday** – e.g. last Friday of the month
 - **Announcement timing** – configurable lead time in days and/or hours before the event; optionally also at the exact event time
 - **Message placeholders:** `{title}`, `{event_date}`, `{event_time}`, `{days_until}`, `{hours_until}`  
-  Example: `📅 {title} am {event_date} um {event_time} Uhr – in {days_until} Tagen!`
+  Example: `📅 {title} on {event_date} at {event_time} – in {days_until} days!`
 - **Next occurrence preview** – Settings shows a live preview of the next calculated send date
-- Configured in **Settings → 📡 Beacon → Termin-Baken**
+- Configured in **Settings → 📡 Beacon → Calendar Beacon**
 
 ### ↩️ Auto-Reply
 - Sends a configurable reply text automatically when a **brand-new direct chat tab** is opened by an incoming message (first contact from a callsign)
@@ -1430,9 +1430,9 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
  ## 📋 Changelog
 
  ### v1.12.0
- - **feat:** 📅 **Termin Beacon** – Kalender-Beacon-Funktion für zeitgesteuerte Aussendungen
- - **feat:** 🖥️ **Console Command Helper** – interaktiver Assistent zur Erstellung und Verwaltung von Konsolenbefehlen
- - **fix:** 🔧 **Optimierungen und Bug Fixes** – diverse Verbesserungen der Stabilität und Performance
+ - **feat:** 📅 **Calendar Beacon** – scheduled event announcements sent automatically to a configured group before and/or at the event time
+ - **feat:** 🖥️ **Console Command Helper** – graphical assistant for reading and setting MeshCom node parameters without typing raw console commands
+ - **fix:** 🔧 **Optimisations & Bug Fixes** – various improvements to stability and performance
 
  ### v1.11.0
 - **feat:** 🌤️ **Weather API** – Live weather data from external providers usable as telemetry fields
