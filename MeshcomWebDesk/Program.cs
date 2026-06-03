@@ -15,6 +15,54 @@ using System.Diagnostics;
 // resolves to the executable's directory instead of System32.
 Environment.CurrentDirectory = AppContext.BaseDirectory;
 
+// ── --version argument ────────────────────────────────────────────────────────
+if (args.Contains("--version"))
+{
+    var ver = System.Reflection.Assembly.GetExecutingAssembly()
+        .GetName().Version?.ToString(3) ?? "?";
+
+    // Read license token and callsign directly from settings files (no DI needed).
+    var licenseInfo = "Free unlicensed version";
+    try
+    {
+        var baseConfig = new ConfigurationBuilder()
+            .SetBasePath(AppContext.BaseDirectory)
+            .AddJsonFile("appsettings.json", optional: true)
+            .Build();
+        var versionDataPath = baseConfig.GetSection("MeshcomSettings").GetValue<string>("DataPath") ?? "data";
+        var versionCfg = new ConfigurationBuilder()
+            .SetBasePath(AppContext.BaseDirectory)
+            .AddJsonFile("appsettings.json", optional: true)
+            .AddJsonFile(Path.Combine(versionDataPath, "appsettings.override.json"), optional: true)
+            .Build();
+
+        var callsign  = versionCfg.GetSection("MeshcomSettings").GetValue<string>("MyCallsign") ?? "";
+        var token     = versionCfg.GetSection("MeshcomSettings:License").GetValue<string>("Token") ?? "";
+        var callBase  = callsign.Contains('-') ? callsign[..callsign.IndexOf('-')] : callsign;
+
+        if (!string.IsNullOrWhiteSpace(token) && !string.IsNullOrWhiteSpace(callBase))
+        {
+            // Quick token decode – extract Callsign field without full RSA validation.
+            var parts = token.Split('.');
+            if (parts.Length == 2)
+            {
+                var json   = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(parts[0]));
+                using var doc = System.Text.Json.JsonDocument.Parse(json);
+                if (doc.RootElement.TryGetProperty("Callsign", out var cs))
+                {
+                    var tokenCall = cs.GetString() ?? "";
+                    if (string.Equals(tokenCall, callBase, StringComparison.OrdinalIgnoreCase))
+                        licenseInfo = $"Licensed for {tokenCall}";
+                }
+            }
+        }
+    }
+    catch { /* settings not readable – show unlicensed */ }
+
+    Console.WriteLine($"MeshCom WebDesk v{ver} – {licenseInfo}");
+    return;
+}
+
 var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseWindowsService(options => options.ServiceName = "MeshcomWebDesk");
 

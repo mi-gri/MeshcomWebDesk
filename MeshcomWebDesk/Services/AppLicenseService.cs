@@ -62,6 +62,9 @@ L/Qmv8jd0OXDOYme1Ztmec/IZzD/SzkGx/SGivZLtC1NYfV2//pK6mV4Fw7cFbwn
     /// </summary>
     public string? LicensedCallsign => License?.Callsign;
 
+    /// <summary>Raised after the license state changes (settings reload or token update).</summary>
+    public event Action? OnLicenseChanged;
+
     /// <summary>
     /// Returns true when the current license grants access to <paramref name="feature"/>.
     /// Always returns true when no feature restrictions are set (Features array is empty).
@@ -90,7 +93,11 @@ L/Qmv8jd0OXDOYme1Ztmec/IZzD/SzkGx/SGivZLtC1NYfV2//pK6mV4Fw7cFbwn
         return _cachedLicense;
     }
 
-    private void InvalidateCache() => _cachedToken = null;
+    private void InvalidateCache()
+    {
+        _cachedToken = null;
+        OnLicenseChanged?.Invoke();
+    }
 
     private AppLicense? Validate(string? licenseToken)
     {
