@@ -84,6 +84,7 @@ public sealed class QsoSummaryService
             using var costsReq = new HttpRequestMessage(HttpMethod.Get,
                 $"https://api.openai.com/v1/organization/costs?start_time={startTime}&end_time={endTime}&bucket_width=1d&limit=31");
             costsReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", s.ApiKey);
+            costsReq.Headers.Add("OpenAI-Project", "MeshComWebDesk");
             using var costsResp = await _http.SendAsync(costsReq, ct);
 
             if (costsResp.IsSuccessStatusCode)
@@ -971,7 +972,10 @@ public sealed class QsoSummaryService
             if (ai.Provider == AiSettings.ProviderAzureOpenAi)
                 request.Headers.Add("api-key", ai.ApiKey);
             else
+            {
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", ai.ApiKey);
+                request.Headers.Add("OpenAI-Project", "MeshComWebDesk");
+            }
             request.Content = new StringContent(requestBody, Encoding.UTF8, "application/json");
 
             using var response = await _http.SendAsync(request, ct);
@@ -1303,7 +1307,10 @@ public sealed class QsoSummaryService
         if (ai.Provider == AiSettings.ProviderAzureOpenAi)
             request.Headers.Add("api-key", ai.ApiKey);
         else
+        {
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", ai.ApiKey);
+            request.Headers.Add("OpenAI-Project", "MeshComWebDesk");
+        }
         request.Content = new StringContent(requestBody, Encoding.UTF8, "application/json");
 
         using var response = await _http.SendAsync(request, ct);
