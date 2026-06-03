@@ -1281,9 +1281,23 @@ public sealed class QsoSummaryService
             {sb}
             """;
 
+        var estimatedTokens = prompt.Length / 4;
+        var modelToUse = ai.Model == "auto"
+            ? estimatedTokens switch
+            {
+                < 10_000 => "gpt-4o-mini",
+                < 60_000 => "gpt-4.1-mini",
+                _        => "gpt-4.1"
+            }
+            : ai.Model;
+
+        if (ai.Model == "auto")
+            _logger.LogInformation("QsoSummaryService: GenerateSummary auto model – ~{Tokens} tokens → {Model}",
+                estimatedTokens, modelToUse);
+
         var requestBody = JsonSerializer.Serialize(new
         {
-            model    = ai.Model,
+            model    = modelToUse,
             messages = new[]
             {
                 new { role = "system", content = "You are a helpful assistant summarizing amateur radio QSO conversations." },
@@ -1296,6 +1310,16 @@ public sealed class QsoSummaryService
         if (ai.LogRequests)
             _logger.LogInformation("QsoSummaryService: {Provider} request for {Callsign}:\n{Body}",
                 ai.Provider, callsignBase, requestBody);
+
+        // DEBUG: log masked key to verify decryption (first 8 + last 4 chars)
+        if (ai.LogRequests && !string.IsNullOrWhiteSpace(ai.ApiKey))
+        {
+            var k = ai.ApiKey;
+            var masked = k.Length > 12
+                ? k[..8] + new string('*', k.Length - 12) + k[^4..]
+                : new string('*', k.Length);
+            _logger.LogInformation("QsoSummaryService: DEBUG key preview: {Key} (len={Len})", masked, k.Length);
+        }
 
         using var request = new HttpRequestMessage(HttpMethod.Post, ai.GetApiUrl());
 
