@@ -106,6 +106,16 @@ jobs:
           tar -czf MeshcomWebDesk-${{ github.ref_name }}-linux-arm64.tar.gz \
             -C publish/linux-arm64 .
 
+      - name: Set release notes path
+        id: notes
+        run: |
+          NOTES_FILE="docs/release-notes/${{ github.ref_name }}.md"
+          if [ -f "$NOTES_FILE" ]; then
+            echo "path=$NOTES_FILE" >> $GITHUB_OUTPUT
+          else
+            echo "path=" >> $GITHUB_OUTPUT
+          fi
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -115,7 +125,8 @@ jobs:
             MeshcomWebDesk-${{ github.ref_name }}-linux-arm64.tar.gz
             MeshcomWebDesk-${{ github.ref_name }}-osx-x64.tar.gz
             MeshcomWebDesk-${{ github.ref_name }}-osx-arm64.tar.gz
-          generate_release_notes: true
+          body_path: ${{ steps.notes.outputs.path != '' && steps.notes.outputs.path || '' }}
+          generate_release_notes: ${{ steps.notes.outputs.path == '' }}
 
   windows-installer:
     name: Windows Installer
