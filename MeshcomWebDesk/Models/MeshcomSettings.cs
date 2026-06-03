@@ -161,6 +161,12 @@ public class MeshcomSettings
     public int BeaconIntervalHours { get; set; } = 1;
 
     /// <summary>
+    /// List of calendar-based beacon entries. Each entry defines a recurring event
+    /// (e.g. club meeting every first Friday) and the announcement lead times.
+    /// </summary>
+    public List<CalendarBeaconEntry> CalendarBeacons { get; set; } = [];
+
+    /// <summary>
     /// When true, telemetry data is periodically read from <see cref="TelemetryFilePath"/>
     /// and sent as a text message to <see cref="TelemetryGroup"/>.
     /// </summary>
@@ -347,4 +353,13 @@ public class MeshcomSettings
     /// For multi-node TLS/NET mode, ConsoleLogEnabled is set per NodeProfile.
     /// </summary>
     public bool ConsoleLogEnabled { get; set; } = false;
+
+    // ── License ──────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Application license token (base64.signature format).
+    /// Issued by DH1FR after a coffee donation. Leave empty to run unlicensed.
+    /// The token is bound to <see cref="MyCallsign"/> without SSID.
+    /// </summary>
+    public string LicenseToken { get; set; } = string.Empty;
 }

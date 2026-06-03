@@ -1,13 +1,23 @@
 ﻿@inherits LayoutComponentBase
 @inject MeshcomWebDesk.Services.LanguageService Loc
 @inject Microsoft.Extensions.Options.IOptionsMonitor<MeshcomWebDesk.Models.MeshcomSettings> SettingsMon
+@inject MeshcomWebDesk.Services.AppLicenseService LicenseService
 @implements IDisposable
 
 <div class="app-layout">
     <header class="app-header">
         <div class="app-header-brand">
             <span>📡</span>
-            <span class="app-title">MeshCom WebDesk <span class="app-version">v@_version</span></span>
+            <span class="app-title">MeshCom WebDesk <span class="app-version">v@_version</span>
+                @if (LicenseService.IsLicensed)
+                {
+                    <span class="app-license-badge app-license-badge--licensed">✅ @Loc.T("Lizenziert für", "Licensed for") @LicenseService.LicensedCallsign</span>
+                }
+                else
+                {
+                    <a class="app-license-badge app-license-badge--unlicensed" href="/about" title="@Loc.T("Lizenz erhalten: PayPal-Spende → Rufzeichen-Lizenzschlüssel", "Get a license: PayPal donation → callsign license key")">💛 @Loc.T("Kostenlos – Per PayPal lizenzieren?", "Free – License via PayPal?")</a>
+                }
+            </span>
         </div>
         <nav class="app-nav">
             <NavLink class="app-nav-link" href="/" Match="NavLinkMatch.All">💬 <span class="nav-label">@Loc.T("Chat", "Chat")</span></NavLink>

@@ -2,13 +2,20 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
+# Ziel-RID wird vom Docker-Buildx je nach Plattform übergeben
+ARG TARGETARCH
+ARG APP_VERSION=""
+
 COPY MeshcomWebDesk/MeshcomWebDesk.csproj MeshcomWebDesk/
-RUN dotnet restore MeshcomWebDesk/MeshcomWebDesk.csproj
+RUN dotnet restore MeshcomWebDesk/MeshcomWebDesk.csproj \
+    -r $( [ "$TARGETARCH" = "arm64" ] && echo "linux-arm64" || echo "linux-x64" )
 
 COPY . .
-RUN dotnet publish MeshcomWebDesk/MeshcomWebDesk.csproj \
-    -c Release -r linux-x64 --self-contained true \
+RUN RID=$( [ "$TARGETARCH" = "arm64" ] && echo "linux-arm64" || echo "linux-x64" ) && \
+    dotnet publish MeshcomWebDesk/MeshcomWebDesk.csproj \
+    -c Release -r $RID --self-contained true \
     -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true \
+    ${APP_VERSION:+-p:AssemblyVersion=${APP_VERSION}.0 -p:FileVersion=${APP_VERSION}.0 -p:InformationalVersion=${APP_VERSION}} \
     -o /app/publish
 
 # ── Runtime stage ─────────────────────────────────────────────────────────────

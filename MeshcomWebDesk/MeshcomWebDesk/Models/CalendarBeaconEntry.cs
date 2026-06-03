@@ -1,0 +1,110 @@
+namespace MeshcomWebDesk.Models;
+
+/// <summary>
+/// Defines how often a calendar event repeats.
+/// </summary>
+public enum CalendarRecurrence
+{
+    /// <summary>Einmaliger Termin am <see cref="CalendarBeaconEntry.ReferenceDate"/>.</summary>
+    Once,
+    /// <summary>Jede Woche am konfigurierten Wochentag.</summary>
+    Weekly,
+    /// <summary>Jede zweite Woche am konfigurierten Wochentag (Ankerpunkt = <see cref="CalendarBeaconEntry.ReferenceDate"/>).</summary>
+    BiWeekly,
+    /// <summary>Jeden Monat am konfigurierten Tag (<see cref="CalendarBeaconEntry.EventDayOfMonth"/>).</summary>
+    Monthly,
+    /// <summary>Den N-ten Wochentag im Monat, z.&#160;B. 1.&#160;Freitag.</summary>
+    NthWeekday,
+    /// <summary>Den letzten Wochentag im Monat, z.&#160;B. letzten Donnerstag.</summary>
+    LastWeekday,
+}
+
+/// <summary>
+/// Ein wiederkehrender Kalender-Termin, der eine Baken-Nachricht auslöst.
+/// Ankündigungen können X Tage und/oder X Stunden vor dem Termin sowie
+/// zum Terminzeitpunkt selbst gesendet werden.
+/// </summary>
+public class CalendarBeaconEntry
+{
+    /// <summary>Eindeutige ID (kurze GUID). Wird beim Erstellen automatisch gesetzt.</summary>
+    public string Id { get; set; } = Guid.NewGuid().ToString("N")[..8];
+
+    /// <summary>Anzeigename des Termins, z.&#160;B. "OV-Abend K01".</summary>
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>Wenn false, wird der Eintrag komplett ignoriert.</summary>
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>
+    /// Zielgruppe für die Bake, z.&#160;B. "#262" oder "*".
+    /// Die führende '#' wird vor dem Senden abgetrennt.
+    /// </summary>
+    public string Group { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Bakentext. Unterstützt dieselben {variable}-Platzhalter wie der normale Bakentext
+    /// sowie zusätzlich: {title}, {event_date}, {event_time}, {days_until}, {hours_until}.
+    /// </summary>
+    public string Text { get; set; } = string.Empty;
+
+    // ── Wann tritt der Termin auf? ─────────────────────────────────────────
+
+    /// <summary>Art der Wiederholung.</summary>
+    public CalendarRecurrence RecurrenceType { get; set; } = CalendarRecurrence.Weekly;
+
+    /// <summary>
+    /// Wochentag des Ereignisses.
+    /// Relevant für: Weekly, BiWeekly, NthWeekday, LastWeekday.
+    /// </summary>
+    public DayOfWeek EventDayOfWeek { get; set; } = DayOfWeek.Friday;
+
+    /// <summary>
+    /// Tag des Monats (1–31).
+    /// Relevant für: Monthly. Bei Monaten mit weniger Tagen wird der letzte gültige Tag verwendet.
+    /// </summary>
+    public int EventDayOfMonth { get; set; } = 1;
+
+    /// <summary>
+    /// Ordnungszahl des Wochentags im Monat (1 = erster, 2 = zweiter, …).
+    /// Relevant für: NthWeekday.
+    /// </summary>
+    public int WeekdayOrdinal { get; set; } = 1;
+
+    /// <summary>Uhrzeit des Termins als String, z.&#160;B. "19:00".</summary>
+    public string EventTime { get; set; } = "19:00";
+
+    /// <summary>Geparste Uhrzeit für die interne Verwendung.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public TimeOnly EventTimeParsed =>
+        TimeOnly.TryParse(EventTime, out var t) ? t : new TimeOnly(19, 0);
+
+    /// <summary>
+    /// Referenzdatum als String (ISO 8601: "yyyy-MM-dd").
+    /// – Once: das genaue Datum des Termins.
+    /// – BiWeekly: ein bekannter Termin als Ankerpunkt für den 2-Wochen-Rhythmus.
+    /// Bei anderen Typen wird dieser Wert ignoriert.
+    /// </summary>
+    public string? ReferenceDate { get; set; }
+
+    /// <summary>Geparste Referenzdatum für die interne Verwendung.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public DateOnly? ReferenceDateParsed =>
+        DateOnly.TryParse(ReferenceDate, out var d) ? d : null;
+
+    // ── Wann soll die Bake gesendet werden? ───────────────────────────────
+
+    /// <summary>
+    /// Ankündigung X Tage vor dem Termin (0 = deaktiviert).
+    /// Beispiel: 3 → Bake wird 3 Tage vorher um <see cref="EventTime"/> gesendet.
+    /// </summary>
+    public int AnnounceLeadDays { get; set; } = 0;
+
+    /// <summary>
+    /// Ankündigung X Stunden vor dem Termin (0 = deaktiviert).
+    /// Beispiel: 2 → Bake wird 2 Stunden vor Terminbeginn gesendet.
+    /// </summary>
+    public int AnnounceLeadHours { get; set; } = 2;
+
+    /// <summary>Wenn true, wird die Bake auch genau zum Terminzeitpunkt gesendet.</summary>
+    public bool AnnounceAtEvent { get; set; } = true;
+}
