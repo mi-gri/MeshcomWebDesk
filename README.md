@@ -1392,9 +1392,14 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 
  ## 📋 Changelog
 
-### v1.11.1 *(in development)*
+ ### v1.12.0 *(in development)*
+ - **feat:** 📅 **Termin Beacon** – Kalender-Beacon-Funktion für zeitgesteuerte Aussendungen
+ - **feat:** 🖥️ **Console Command Helper** – interaktiver Assistent zur Erstellung und Verwaltung von Konsolenbefehlen
+ - **fix:** 🔧 **Optimierungen und Bug Fixes** – diverse Verbesserungen der Stabilität und Performance
 
-### v1.11.0 → [Full release notes](docs/release-notes/v1.11.0.md)
+ ### v1.11.1 *(in development)*
+
+ ### v1.11.0
 - **feat:** 🌤️ **Weather API** – Live weather data from external providers usable as telemetry fields
   - **AWEKAS** (`https://api.awekas.at/current.php?key=...`) and **Weather Underground** supported
   - **Simulation provider**: offline test mode without API key (file-based or random values)
