@@ -737,12 +737,17 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
         SetTelemetryStatus(false, null);
     }
 
-    private static HashSet<int> ParseScheduleHours(string input) =>
-        input.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-             .Select(p => int.TryParse(p, out var h) && h >= 0 && h <= 23 ? h : -1)
-             .Where(h => h >= 0)
-             .Take(6)
-             .ToHashSet();
+    private static HashSet<int> ParseScheduleHours(string input)
+    {
+        if (input.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                 .Any(p => p == "*"))
+            return Enumerable.Range(0, 24).ToHashSet();
+
+        return input.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Select(p => int.TryParse(p, out var h) && h >= 0 && h <= 23 ? h : -1)
+                    .Where(h => h >= 0)
+                    .ToHashSet();
+    }
 
     private static DateTime ComputeNextScheduledTime(HashSet<int> hours, DateTime from)
     {
