@@ -125,12 +125,18 @@
                         </div>
                         <label>Device IP</label>
                         <input type="text" @bind="node.DeviceIp" />
-                        <label>Device Port</label>
-                        <input type="number" min="1" max="65535" @bind="node.DevicePort" />
+                        <label>
+                            Device Port<br />
+                            <small>@Loc.T("Fest: 1799 (gerätefixiert)", "Fixed: 1799 (device-fixed)")</small>
+                        </label>
+                        <input type="number" value="@node.DevicePort" readonly style="opacity:0.6;cursor:not-allowed;" />
                         <label>Listen IP</label>
                         <input type="text" @bind="node.ListenIp" />
-                        <label>Listen Port</label>
-                        <input type="number" min="1" max="65535" @bind="node.ListenPort" />
+                        <label>
+                            Listen Port<br />
+                            <small>@Loc.T("Fest: 1799 (gerätefixiert)", "Fixed: 1799 (device-fixed)")</small>
+                        </label>
+                        <input type="number" value="@node.ListenPort" readonly style="opacity:0.6;cursor:not-allowed;" />
                         @* ── TLS Console ── *@
                         <label>
                             @Loc.T("TLS Passwort", "TLS Password")<br />
