@@ -71,6 +71,9 @@ public sealed class ConsoleCommandDef
     /// </summary>
     public bool SuggestLocalIp { get; init; }
 
+    /// <summary>Wenn true, wird das Eingabefeld als Passwortfeld (type="password") gerendert.</summary>
+    public bool IsPassword { get; init; }
+
     /// <summary>Bei Action: Bestätigung erforderlich (z.B. Reboot).</summary>
     public bool NeedsConfirm { get; init; }
 
