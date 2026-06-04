@@ -86,8 +86,19 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
         _settings            = settings.CurrentValue;
         settings.OnChange(s =>
         {
+            var prev = _settings;
             _settings = s;
             _logger.LogInformation("Settings reloaded from appsettings.json.");
+
+            // Re-register with devices if the node list changed so newly-added nodes
+            // start forwarding UDP data without requiring an app restart.
+            bool nodesChanged = prev.Nodes.Count != s.Nodes.Count
+                || prev.Nodes.Zip(s.Nodes).Any(p =>
+                    p.First.Id         != p.Second.Id         ||
+                    p.First.DeviceIp   != p.Second.DeviceIp   ||
+                    p.First.DevicePort != p.Second.DevicePort);
+            if (nodesChanged)
+                _ = RegisterWithDeviceAsync();
         });
 
         _chatService.OnNewDirectTab += (callsign, msg) => _ = SendAutoReplyAsync(callsign, msg.Timestamp, msg.NodeId);
