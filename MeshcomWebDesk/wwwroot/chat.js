@@ -336,7 +336,7 @@ window.meshcomChat = (function () {
 
             // Keyboard: Enter = senden, Tab = Variablen expandieren – KEIN Blazor @onkeydown
             el.addEventListener('keydown', async function (e) {
-                if (e.key === 'Enter' && !e.shiftKey) {
+                if (e.key === 'Enter') {
                     e.preventDefault();
                     if (dotNetRef) await dotNetRef.invokeMethodAsync('JsSendAsync');
                 } else if (e.key === 'Tab') {
