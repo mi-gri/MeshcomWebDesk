@@ -74,6 +74,10 @@ public sealed class ConsoleCommandHelperService : IDisposable
     // Timeout: nach dieser Zeit wird ein PendingCommand ohne Antwort verworfen.
     private static readonly TimeSpan ResponseTimeout = TimeSpan.FromSeconds(4);
 
+    // Globaler Parse-Index: nur Zeilen ab diesem Snapshot-Index werden im globalen Parse verarbeitet.
+    // Verhindert, dass historische Status-Zeilen frisch gesetzte Werte überschreiben.
+    private int _globalParseFromIndex = 0;
+
     // Firmware-Fehlermuster – Zeile gilt als Fehler wenn eines davon matcht.
     private static readonly Regex ErrorLineRx = new(
         @"wrong\s+command|unknown\s+command|not\s+supported|not\s+between|invalid|failed|no\s+hardware",
@@ -98,6 +102,7 @@ public sealed class ConsoleCommandHelperService : IDisposable
             // Einstellungsänderung: CurrentValues leeren damit der nächste
             // Refresh frische Werte vom neuen Ziel liefert.
             CurrentValues.Clear();
+            _globalParseFromIndex = 0;
             OnChange?.Invoke();
         });
     }
@@ -181,6 +186,7 @@ public sealed class ConsoleCommandHelperService : IDisposable
             {
                 _logger.LogDebug("CCH optimistic update: {Cmd} = {Val}", commandName, value);
                 UpdateValue(commandName, value);
+                OnChange?.Invoke();
             }
             else
             {
@@ -304,14 +310,17 @@ public sealed class ConsoleCommandHelperService : IDisposable
             }
         }
 
-        // ── 2. Globaler --info Snapshot-Parse (kein PendingCommand) ──────
-        // Nur Zeilen die nicht als Fehler markiert sind
+        // ── 2. Globaler Parse (nur neue Zeilen seit letztem Durchlauf) ──────
+        // _globalParseFromIndex verhindert, dass historische Status-Zeilen
+        // frisch gesetzte Werte (z.B. via OptimisticUpdate) überschreiben.
+        var parseStart = Math.Min(_globalParseFromIndex, snapshot.Count);
         var changed = false;
         foreach (var def in ConsoleCommandDefinitions.All)
         {
             if (string.IsNullOrEmpty(def.ParsePattern)) continue;
-            foreach (var line in snapshot)
+            for (int i = parseStart; i < snapshot.Count; i++)
             {
+                var line = snapshot[i];
                 if (ErrorLineRx.IsMatch(line)) continue;
                 var m = Regex.Match(line, def.ParsePattern, RegexOptions.IgnoreCase);
                 if (!m.Success) continue;
@@ -320,11 +329,10 @@ public sealed class ConsoleCommandHelperService : IDisposable
             }
         }
 
-        // Toggle-Erkennung (--name on/off) nur aus Firmware-Antwortzeilen.
-        // Echo-Zeilen beginnen mit "--" und repräsentieren den gesendeten Befehl,
-        // nicht die Firmware-Antwort – sie werden daher explizit ausgeschlossen.
-        foreach (var line in snapshot)
+        // Toggle-Erkennung (--name on/off) – nur neue Zeilen, Echo-Zeilen ausgeschlossen.
+        for (int i = parseStart; i < snapshot.Count; i++)
         {
+            var line = snapshot[i];
             if (ErrorLineRx.IsMatch(line)) continue;
             if (line.TrimStart().StartsWith("--", StringComparison.Ordinal)) continue;
             var tm = Regex.Match(line, @"--(\w+)\s+(on|off)", RegexOptions.IgnoreCase);
@@ -332,6 +340,8 @@ public sealed class ConsoleCommandHelperService : IDisposable
             var state = tm.Groups[2].Value.ToLowerInvariant();
             if (UpdateValue(tm.Groups[1].Value, state)) changed = true;
         }
+
+        _globalParseFromIndex = snapshot.Count;
 
         if (changed)
             OnChange?.Invoke();
