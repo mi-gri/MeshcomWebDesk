@@ -30,7 +30,7 @@ public class VersionCommand : IBotCommand
     public Task<string> ExecuteAsync(string[] args, string senderCallsign)
     {
         var callsign = _licenseService.LicensedCallsign;
-        var suffix   = callsign != null ? $"+LI-{callsign}" : string.Empty;
+        var suffix   = callsign != null ? $"-{callsign}" : string.Empty;
         return Task.FromResult($"MeshComWebDesk v{BaseVersion}{suffix}");
     }
 }
