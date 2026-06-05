@@ -112,6 +112,17 @@
 
     public void Dispose() => _cts.Cancel();
 
+    protected override void OnParametersSet()
+    {
+        // Refresh QRZ first name from cache on every render so it shows without hover
+        if (SettingsOptions.CurrentValue.Qrz.Enabled &&
+            QrzService.TryGetCached(Callsign, out var info) && info is not null)
+        {
+            _qrzInfo   = info;
+            _firstName = string.IsNullOrEmpty(info.FirstName) ? null : info.FirstName;
+        }
+    }
+
     private async Task OnMouseEnter()
     {
         _pinned = false;
