@@ -1144,6 +1144,19 @@ Die App bekommt ein eigenes Fenster ohne Browser-UI und erscheint im Startmenü 
 
 ## 🐳 Docker – Deployment on Linux
 
+Official multi-architecture Docker images are published automatically on every release to the **GitHub Container Registry**:
+
+| Tag | Description |
+|-----|-------------|
+| `ghcr.io/dh1fr/meshcomwebdesk:latest` | Latest stable release |
+| `ghcr.io/dh1fr/meshcomwebdesk:v1.12.2` | Specific version |
+
+Supported platforms: `linux/amd64` and `linux/arm64` (Raspberry Pi 4 / 5).
+
+> All published images are listed at **[ghcr.io/dh1fr/meshcomwebdesk](https://github.com/DH1FR/MeshcomWebDesk/pkgs/container/meshcomwebdesk)**.
+
+---
+
 ### Prerequisites
 
 ```bash
@@ -1158,16 +1171,35 @@ newgrp docker
 
 ### Initial setup & start
 
+Two options – choose one:
+
+**Option A – Pre-built image from GHCR (recommended, no build step)**
+
 ```bash
-# Clone repository
+# Clone repository (for docker-compose.yml and config)
 git clone https://github.com/DH1FR/MeshcomWebDesk.git
 cd MeshcomWebDesk
+
+# Pull latest image
+docker pull ghcr.io/dh1fr/meshcomwebdesk:latest
 
 # Create optional config file (overrides embedded defaults)
 cp deploy/appsettings.linux.json appsettings.json
 nano appsettings.json          # set DeviceIp, MyCallsign, Groups etc.
 
-# Build image and start container
+# Start container
+docker compose up -d
+```
+
+**Option B – Build image locally from source**
+
+```bash
+git clone https://github.com/DH1FR/MeshcomWebDesk.git
+cd MeshcomWebDesk
+
+cp deploy/appsettings.linux.json appsettings.json
+nano appsettings.json
+
 docker compose up -d --build
 ```
 
@@ -1202,7 +1234,20 @@ docker compose up -d
 
 ### 🔄 Updating to a new version
 
-Pull the latest changes, rebuild the image and replace the container:
+**Option A – Pre-built image from GHCR (recommended)**
+
+```bash
+cd MeshcomWebDesk
+
+# Pull new image and replace container (brief downtime)
+docker compose pull
+docker compose up -d
+
+# Remove unused old image (optional)
+docker image prune -f
+```
+
+**Option B – Build from source**
 
 ```bash
 cd MeshcomWebDesk
