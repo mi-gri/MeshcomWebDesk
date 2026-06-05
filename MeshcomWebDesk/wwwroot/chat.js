@@ -3,6 +3,35 @@
 window.meshcomChat = (function () {
     const STORAGE_KEY = 'meshcom-monitor-height';
 
+    // Berechnet die JSON-kodierten Bytes des msg-Werts, so wie C# JsonSerializer sie sendet.
+    // ASCII-Zeichen: 1 Byte. BMP-Non-ASCII (z.B. °, ü): \uXXXX = 6 Bytes.
+    // Emojis (surrogate pairs): \uXXXX\uXXXX = 12 Bytes.
+    function csharpJsonMsgBytes(text) {
+        var bytes = 0;
+        for (var i = 0; i < text.length; i++) {
+            var c = text.charCodeAt(i);
+            if (c < 0x80) {
+                bytes += 1;
+            } else if (c >= 0xD800 && c <= 0xDBFF) {
+                bytes += 12; // surrogate pair (Emoji): \uXXXX\uXXXX
+                i++;          // low surrogate überspringen
+            } else {
+                bytes += 6;  // BMP-Non-ASCII: \uXXXX
+            }
+        }
+        return bytes;
+    }
+
+    function updateSendCounter(counter, text) {
+        var chars     = text.length;
+        var jsonBytes = csharpJsonMsgBytes(text);
+        counter.textContent = chars + '/149';
+        counter.title       = jsonBytes + 'B / 200B JSON';
+        counter.className   = 'char-counter' +
+            (chars >= 145 || jsonBytes > 200 ? ' char-danger' :
+             chars >= 130 || jsonBytes >= 180 ? ' char-warn' : '');
+    }
+
     function initResizer() {
         const divider   = document.getElementById('pane-divider');
         const lowerPane = document.getElementById('lower-pane');
@@ -292,11 +321,7 @@ window.meshcomChat = (function () {
             // Counter aktualisieren
             var bar     = el.closest('.send-bar');
             var counter = bar && bar.querySelector('.char-counter');
-            if (counter) {
-                var len = el.value.length;
-                counter.textContent = len + '/149';
-                counter.className = 'char-counter' + (len >= 145 ? ' char-danger' : len >= 130 ? ' char-warn' : '');
-            }
+            if (counter) updateSendCounter(counter, el.value);
         },
 
         // ── SendBar: liest den aktuellen Wert des Eingabefelds ──
@@ -312,11 +337,7 @@ window.meshcomChat = (function () {
             el.value = value;
             // Counter manuell aktualisieren
             var counter = el.closest('.send-bar') && el.closest('.send-bar').querySelector('.char-counter');
-            if (counter) {
-                var len = value.length;
-                counter.textContent = len + '/149';
-                counter.className = 'char-counter' + (len >= 145 ? ' char-danger' : len >= 130 ? ' char-warn' : '');
-            }
+            if (counter) updateSendCounter(counter, value);
         },
 
         // ── SendBar: registriert oninput-Handler für Live-Counter ohne Blazor-Binding ──
@@ -329,9 +350,7 @@ window.meshcomChat = (function () {
                 var bar     = el.closest('.send-bar');
                 var counter = bar && bar.querySelector('.char-counter');
                 if (!counter) return;
-                var len = el.value.length;
-                counter.textContent = len + '/149';
-                counter.className = 'char-counter' + (len >= 145 ? ' char-danger' : len >= 130 ? ' char-warn' : '');
+                updateSendCounter(counter, el.value);
             });
 
             // Keyboard: Enter = senden, Tab = Variablen expandieren – KEIN Blazor @onkeydown
@@ -347,11 +366,7 @@ window.meshcomChat = (function () {
                         // Counter aktualisieren
                         var bar     = el.closest('.send-bar');
                         var counter = bar && bar.querySelector('.char-counter');
-                        if (counter) {
-                            var len = expanded.length;
-                            counter.textContent = len + '/149';
-                            counter.className = 'char-counter' + (len >= 145 ? ' char-danger' : len >= 130 ? ' char-warn' : '');
-                        }
+                        if (counter) updateSendCounter(counter, expanded);
                     }
                 }
             });

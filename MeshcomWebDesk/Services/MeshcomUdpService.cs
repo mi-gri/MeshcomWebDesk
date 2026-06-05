@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using MeshcomWebDesk.Helpers;
 using MeshcomWebDesk.Models;
 using MeshcomWebDesk.Services.Bot;
+using static MeshcomWebDesk.Helpers.MessageValidator;
 
 namespace MeshcomWebDesk.Services;
 
@@ -444,40 +445,8 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
         }
     }
 
-    /// <summary>
-    /// Splits a message into chunks that fit within the MeshCom 149-character wire limit.
-    /// Splits preferentially at the last space or comma within the limit to avoid cutting words.
-    /// Falls back to a hard split only when no word boundary is found.
-    /// </summary>
-    private static IReadOnlyList<string> SplitMessage(string text, int maxLen = 149)
-    {
-        if (text.Length <= maxLen)
-            return [text];
-
-        var parts = new List<string>();
-        var span  = text.AsSpan();
-
-        while (!span.IsEmpty)
-        {
-            if (span.Length <= maxLen)
-            {
-                parts.Add(span.ToString());
-                break;
-            }
-
-            var slice   = span[..maxLen];
-            var splitAt = slice.LastIndexOf(' ');
-            if (splitAt <= 0) splitAt = slice.LastIndexOf(',');
-            if (splitAt <= 0) splitAt = maxLen;   // hard split as last resort
-
-            parts.Add(span[..splitAt].TrimEnd().ToString());
-            span = splitAt < maxLen
-                ? span[(splitAt + 1)..].TrimStart(' ')
-                : span[splitAt..];
-        }
-
-        return parts;
-    }
+    // Message splitting and JSON byte validation are handled by MessageValidator (Helpers/MessageValidator.cs).
+    // The 'using static' import at the top makes SplitMessage() and JsonEncodedLength() available directly.
 
     /// <summary>
     /// Substitutes all supported template variables in <paramref name="template"/>.
@@ -1016,6 +985,15 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
 
             var json = JsonSerializer.Serialize(new { type = "msg", dst = destination, msg = text });
             var bytes = Encoding.UTF8.GetBytes(json);
+
+            if (bytes.Length > 254)
+            {
+                _logger.LogWarning(
+                    "JSON-Paket zu groß ({Bytes} Bytes, max 254) – Senden abgebrochen: \"{Excerpt}\"",
+                    bytes.Length, text[..Math.Min(40, text.Length)]);
+                return;
+            }
+
             var remoteEp = new IPEndPoint(IPAddress.Parse(deviceIp), devicePort);
 
             await _udpClient.SendAsync(bytes, bytes.Length, remoteEp);

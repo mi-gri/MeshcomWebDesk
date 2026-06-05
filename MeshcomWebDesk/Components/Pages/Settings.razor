@@ -793,6 +793,11 @@
                 <label>@Loc.T("Bakentext", "Beacon Text")</label>
                 <div class="settings-input-hint">
                     <input type="text" @bind="_model.BeaconText" />
+                    @{ var _bParts = MessageValidator.CountParts(_model.BeaconText); }
+                    @if (_bParts > 1)
+                    {
+                        <span class="settings-hint char-warn">⚠ @Loc.T("Text zu lang", "Text too long") – @_bParts @Loc.T("Pakete (wird automatisch aufgeteilt)", "packets (split automatically)")</span>
+                    }
                     <span class="settings-hint">
                         @Loc.T("Unterstützte Variablen:", "Supported variables:")
                         <code>{version}</code>,
@@ -864,6 +869,11 @@
                         <label>@Loc.T("Bakentext","Beacon Text")</label>
                         <div class="settings-input-hint">
                             <input type="text" @bind="e.Text" />
+                            @{ var _eParts = MessageValidator.CountParts(e.Text); }
+                            @if (_eParts > 1)
+                            {
+                                <span class="settings-hint char-warn">⚠ @Loc.T("Text zu lang", "Text too long") – @_eParts @Loc.T("Pakete (wird automatisch aufgeteilt)", "packets (split automatically)")</span>
+                            }
                             <span class="settings-hint">
                                 @Loc.T("Variablen:","Variables:")
                                 <code>{mycall}</code>, <code>{title}</code>, <code>{event_date}</code>,
