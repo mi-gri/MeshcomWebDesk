@@ -25,11 +25,19 @@ window.meshcomChat = (function () {
     function updateSendCounter(counter, text) {
         var chars     = text.length;
         var jsonBytes = csharpJsonMsgBytes(text);
+        var tooLarge  = chars > 149 || jsonBytes > 200;
         counter.textContent = chars + '/149';
         counter.title       = jsonBytes + 'B / 200B JSON';
         counter.className   = 'char-counter' +
             (chars >= 145 || jsonBytes > 200 ? ' char-danger' :
              chars >= 130 || jsonBytes >= 180 ? ' char-warn' : '');
+
+        // Senden-Button sperren wenn Paket zu groß – aber Cooldown-Sperre nicht überschreiben
+        var bar = counter.closest('.send-bar');
+        var btn = bar && bar.querySelector('.btn-send');
+        if (btn && !btn.classList.contains('btn-send-cooldown')) {
+            btn.disabled = tooLarge;
+        }
     }
 
     function initResizer() {
