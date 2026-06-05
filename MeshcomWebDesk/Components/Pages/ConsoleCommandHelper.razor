@@ -65,7 +65,7 @@
                                 }
                                 else if (curVal != null)
                                 {
-                                    <span class="cch-value-badge cch-value-known">@curVal</span>
+                                    <span class="cch-value-badge cch-value-known">@(cmd.IsPassword ? "••••••••" : curVal)</span>
                                 }
                                 else
                                 {
@@ -359,7 +359,7 @@
         var val = _editValues.GetValueOrDefault(cmd.Name, string.Empty);
         if (string.IsNullOrWhiteSpace(val)) return;
         await CmdHelper.SendCommandAsync(cmd.Name, val);
-        ShowToast($"--{cmd.Name} {val}");
+        ShowToast($"--{cmd.Name} {(cmd.IsPassword ? "••••••••" : val)}");
     }
 
     private Task SendActionAsync(ConsoleCommandDef cmd)
