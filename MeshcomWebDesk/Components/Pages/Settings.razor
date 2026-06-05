@@ -55,14 +55,20 @@
                 <label>Listen IP</label>
                 <input type="text" @bind="_model.ListenIp" />
 
-                <label>Listen Port</label>
-                <input type="number" min="1" max="65535" @bind="_model.ListenPort" />
+                <label>
+                    Listen Port<br />
+                    <small>@Loc.T("Fest: 1799 (gerätefixiert)", "Fixed: 1799 (device-fixed)")</small>
+                </label>
+                <input type="number" value="@_model.ListenPort" readonly style="opacity:0.6;cursor:not-allowed;" />
 
                 <label>Device IP</label>
                 <input type="text" @bind="_model.DeviceIp" />
 
-                <label>Device Port</label>
-                <input type="number" min="1" max="65535" @bind="_model.DevicePort" />
+                <label>
+                    Device Port<br />
+                    <small>@Loc.T("Fest: 1799 (gerätefixiert)", "Fixed: 1799 (device-fixed)")</small>
+                </label>
+                <input type="number" value="@_model.DevicePort" readonly style="opacity:0.6;cursor:not-allowed;" />
 
                 <label>@Loc.T("Eigenes Rufzeichen", "Own Callsign")</label>
                 <input type="text" @bind="_model.MyCallsign" />
@@ -125,12 +131,18 @@
                         </div>
                         <label>Device IP</label>
                         <input type="text" @bind="node.DeviceIp" />
-                        <label>Device Port</label>
-                        <input type="number" min="1" max="65535" @bind="node.DevicePort" />
+                        <label>
+                            Device Port<br />
+                            <small>@Loc.T("Fest: 1799 (gerätefixiert)", "Fixed: 1799 (device-fixed)")</small>
+                        </label>
+                        <input type="number" value="@node.DevicePort" readonly style="opacity:0.6;cursor:not-allowed;" />
                         <label>Listen IP</label>
                         <input type="text" @bind="node.ListenIp" />
-                        <label>Listen Port</label>
-                        <input type="number" min="1" max="65535" @bind="node.ListenPort" />
+                        <label>
+                            Listen Port<br />
+                            <small>@Loc.T("Fest: 1799 (gerätefixiert)", "Fixed: 1799 (device-fixed)")</small>
+                        </label>
+                        <input type="number" value="@node.ListenPort" readonly style="opacity:0.6;cursor:not-allowed;" />
                         @* ── TLS Console ── *@
                         <label>
                             @Loc.T("TLS Passwort", "TLS Password")<br />
@@ -781,6 +793,11 @@
                 <label>@Loc.T("Bakentext", "Beacon Text")</label>
                 <div class="settings-input-hint">
                     <input type="text" @bind="_model.BeaconText" />
+                    @{ var _bParts = MessageValidator.CountParts(_model.BeaconText); }
+                    @if (_bParts > 1)
+                    {
+                        <span class="settings-hint char-warn">⚠ @Loc.T("Text zu lang", "Text too long") – @_bParts @Loc.T("Pakete (wird automatisch aufgeteilt)", "packets (split automatically)")</span>
+                    }
                     <span class="settings-hint">
                         @Loc.T("Unterstützte Variablen:", "Supported variables:")
                         <code>{version}</code>,
@@ -852,6 +869,11 @@
                         <label>@Loc.T("Bakentext","Beacon Text")</label>
                         <div class="settings-input-hint">
                             <input type="text" @bind="e.Text" />
+                            @{ var _eParts = MessageValidator.CountParts(e.Text); }
+                            @if (_eParts > 1)
+                            {
+                                <span class="settings-hint char-warn">⚠ @Loc.T("Text zu lang", "Text too long") – @_eParts @Loc.T("Pakete (wird automatisch aufgeteilt)", "packets (split automatically)")</span>
+                            }
                             <span class="settings-hint">
                                 @Loc.T("Variablen:","Variables:")
                                 <code>{mycall}</code>, <code>{title}</code>, <code>{event_date}</code>,
@@ -965,13 +987,37 @@
 
                 <label>
                     @Loc.T("Sendezeiten (Stunden 0\u201323)", "Send times (hours 0\u201323)")<br />
-                    <small>@Loc.T("Kommagetrennt, z.\u00a0B. 11,15 f\u00fcr 11:00 und 15:00 Uhr", "Comma-separated, e.\u00a0g. 11,15 for 11:00 and 15:00")</small>
+                    <small>@Loc.T("Kommagetrennt, z.\u00a0B. 11,15 f\u00fcr 11:00 und 15:00 Uhr. * = alle Stunden.", "Comma-separated, e.\u00a0g. 11,15 for 11:00 and 15:00. * = every hour.")</small>
                 </label>
                 <input type="text" @bind="_model.TelemetryScheduleHours" placeholder="11,15" />
-                @if (_model.TelemetryScheduleHours?.Split(',', StringSplitOptions.RemoveEmptyEntries).Length > 6)
+                @{
+                    var _schedRaw = _model.TelemetryScheduleHours?
+                        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? [];
+                    var _schedHasStar = _schedRaw.Any(p => p == "*");
+                    var _schedValid = _schedRaw
+                        .Where(p => p != "*")
+                        .Select(p => int.TryParse(p, out var h) && h >= 0 && h <= 23 ? h : -1)
+                        .Where(h => h >= 0).ToList();
+                    var _schedHasDupes = _schedValid.Count != _schedValid.Distinct().Count();
+                    var _schedHasInvalid = _schedRaw.Any(p => p != "*" && (!int.TryParse(p, out var hv) || hv < 0 || hv > 23));
+                    var _schedOverLimit = !_schedHasStar && _schedValid.Distinct().Count() > 24;
+                }
+                @if (_schedHasDupes)
+                {
+                    <div style="font-size:.8rem;color:#f0a030;margin-top:.2rem">
+                        @Loc.T("Doppelte Stunden werden ignoriert.", "Duplicate hours will be ignored.")
+                    </div>
+                }
+                @if (_schedHasInvalid)
                 {
                     <div style="font-size:.8rem;color:#f85149;margin-top:.2rem">
-                        @Loc.T("Maximal 6 Sendezeiten möglich.", "Maximum 6 send times allowed.")
+                        @Loc.T("Ungültige Werte werden ignoriert (nur 0–23 oder *).", "Invalid values will be ignored (only 0–23 or *).")
+                    </div>
+                }
+                @if (_schedOverLimit)
+                {
+                    <div style="font-size:.8rem;color:#f85149;margin-top:.2rem">
+                        @Loc.T("Maximal 24 Sendezeiten möglich.", "Maximum 24 send times allowed.")
                     </div>
                 }
 

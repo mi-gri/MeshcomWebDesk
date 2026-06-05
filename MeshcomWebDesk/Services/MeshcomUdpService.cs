@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using MeshcomWebDesk.Helpers;
 using MeshcomWebDesk.Models;
 using MeshcomWebDesk.Services.Bot;
+using static MeshcomWebDesk.Helpers.MessageValidator;
 
 namespace MeshcomWebDesk.Services;
 
@@ -86,8 +87,19 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
         _settings            = settings.CurrentValue;
         settings.OnChange(s =>
         {
+            var prev = _settings;
             _settings = s;
             _logger.LogInformation("Settings reloaded from appsettings.json.");
+
+            // Re-register with devices if the node list changed so newly-added nodes
+            // start forwarding UDP data without requiring an app restart.
+            bool nodesChanged = prev.Nodes.Count != s.Nodes.Count
+                || prev.Nodes.Zip(s.Nodes).Any(p =>
+                    p.First.Id         != p.Second.Id         ||
+                    p.First.DeviceIp   != p.Second.DeviceIp   ||
+                    p.First.DevicePort != p.Second.DevicePort);
+            if (nodesChanged)
+                _ = RegisterWithDeviceAsync();
         });
 
         _chatService.OnNewDirectTab += (callsign, msg) => _ = SendAutoReplyAsync(callsign, msg.Timestamp, msg.NodeId);
@@ -389,9 +401,9 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
         // Subtract 1 minute so {last-qso} only shows QSOs clearly before the current exchange,
         // not messages from the same session/minute window.
         var text = await ExpandVariablesAsync(_settings.AutoReplyText, callsign, before: triggerTimestamp);
-        var autoReplyDelay = Math.Clamp(_settings.ReplyDelaySeconds, 0, 30);
-        if (autoReplyDelay > 0)
-            await Task.Delay(TimeSpan.FromSeconds(autoReplyDelay));
+        // Always wait at least 500 ms – same reason as bot replies (node UDP crash on immediate TX).
+        var autoReplyDelayMs = Math.Max(500, Math.Clamp(_settings.ReplyDelaySeconds, 0, 30) * 1000);
+        await Task.Delay(autoReplyDelayMs);
         _logger.LogInformation("Auto-reply to new contact {Callsign} via node {NodeId}", callsign, nodeId);
         await SendMessageAsync(callsign, text, sourceNodeId: nodeId);
     }
@@ -403,8 +415,16 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             _logger.LogDebug("Bot command received from {From}: {Text}", message.From, message.Text);
             if (!_settings.BotEnabled)
             {
-                _logger.LogDebug("Bot is disabled – ignoring command from {From}", message.From);
-                return;
+                // ping and version always respond regardless of BotEnabled (diagnostic commands).
+                var raw = message.Text?.Trim() ?? string.Empty;
+                var cmdName = raw.Equals("ping", StringComparison.OrdinalIgnoreCase)
+                    ? "ping"
+                    : raw.TrimStart('-').TrimStart('—').Split(' ', 2)[0].ToLowerInvariant();
+                if (cmdName is not ("ping" or "version"))
+                {
+                    _logger.LogDebug("Bot is disabled – ignoring command from {From}", message.From);
+                    return;
+                }
             }
 
             var reply = await _botCommandService.ExecuteAsync(message.Text!, message.From, message);
@@ -414,9 +434,10 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             _logger.LogInformation("Bot reply to {From} via node {NodeId} ({Parts} part(s)): {Preview}",
                 message.From, message.NodeId, parts.Count, reply.Length > 80 ? reply[..80] + "…" : reply);
 
-            var botDelay = Math.Clamp(_settings.ReplyDelaySeconds, 0, 30);
-            if (botDelay > 0)
-                await Task.Delay(TimeSpan.FromSeconds(botDelay));
+            // Always wait at least 500 ms so the node's ACK/echo UDP packets clear before
+            // we send our reply – sending immediately after reception crashes the node UDP stack.
+            var botDelayMs = Math.Max(500, Math.Clamp(_settings.ReplyDelaySeconds, 0, 30) * 1000);
+            await Task.Delay(botDelayMs);
 
             for (var i = 0; i < parts.Count; i++)
             {
@@ -433,40 +454,8 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
         }
     }
 
-    /// <summary>
-    /// Splits a message into chunks that fit within the MeshCom 149-character wire limit.
-    /// Splits preferentially at the last space or comma within the limit to avoid cutting words.
-    /// Falls back to a hard split only when no word boundary is found.
-    /// </summary>
-    private static IReadOnlyList<string> SplitMessage(string text, int maxLen = 149)
-    {
-        if (text.Length <= maxLen)
-            return [text];
-
-        var parts = new List<string>();
-        var span  = text.AsSpan();
-
-        while (!span.IsEmpty)
-        {
-            if (span.Length <= maxLen)
-            {
-                parts.Add(span.ToString());
-                break;
-            }
-
-            var slice   = span[..maxLen];
-            var splitAt = slice.LastIndexOf(' ');
-            if (splitAt <= 0) splitAt = slice.LastIndexOf(',');
-            if (splitAt <= 0) splitAt = maxLen;   // hard split as last resort
-
-            parts.Add(span[..splitAt].TrimEnd().ToString());
-            span = splitAt < maxLen
-                ? span[(splitAt + 1)..].TrimStart(' ')
-                : span[splitAt..];
-        }
-
-        return parts;
-    }
+    // Message splitting and JSON byte validation are handled by MessageValidator (Helpers/MessageValidator.cs).
+    // The 'using static' import at the top makes SplitMessage() and JsonEncodedLength() available directly.
 
     /// <summary>
     /// Substitutes all supported template variables in <paramref name="template"/>.
@@ -737,12 +726,17 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
         SetTelemetryStatus(false, null);
     }
 
-    private static HashSet<int> ParseScheduleHours(string input) =>
-        input.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-             .Select(p => int.TryParse(p, out var h) && h >= 0 && h <= 23 ? h : -1)
-             .Where(h => h >= 0)
-             .Take(6)
-             .ToHashSet();
+    private static HashSet<int> ParseScheduleHours(string input)
+    {
+        if (input.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                 .Any(p => p == "*"))
+            return Enumerable.Range(0, 24).ToHashSet();
+
+        return input.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Select(p => int.TryParse(p, out var h) && h >= 0 && h <= 23 ? h : -1)
+                    .Where(h => h >= 0)
+                    .ToHashSet();
+    }
 
     private static DateTime ComputeNextScheduledTime(HashSet<int> hours, DateTime from)
     {
@@ -1000,6 +994,15 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
 
             var json = JsonSerializer.Serialize(new { type = "msg", dst = destination, msg = text });
             var bytes = Encoding.UTF8.GetBytes(json);
+
+            if (bytes.Length > 254)
+            {
+                _logger.LogWarning(
+                    "JSON-Paket zu groß ({Bytes} Bytes, max 254) – Senden abgebrochen: \"{Excerpt}\"",
+                    bytes.Length, text[..Math.Min(40, text.Length)]);
+                return;
+            }
+
             var remoteEp = new IPEndPoint(IPAddress.Parse(deviceIp), devicePort);
 
             await _udpClient.SendAsync(bytes, bytes.Length, remoteEp);

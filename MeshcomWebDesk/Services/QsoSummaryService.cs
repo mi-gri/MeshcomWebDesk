@@ -746,13 +746,17 @@ public sealed class QsoSummaryService
                 ? BuildAllDirectWhere(myCallsign, from, to)
                 : BuildDirectConversationWhere(callsignBase, myCallsign, from, to, null);
 
+            // In all-contacts mode search spans many conversations over 90 days,
+            // so apply a 4× multiplier to avoid cutting off older relevant messages.
+            var msgLimit = allDirectContacts ? ai.MaxMessages * 4 : ai.MaxMessages;
+
             await using var cmd = new MySqlCommand(
                 $"""
                 SELECT timestamp, from_call, to_call, text, is_outgoing
                 FROM `{db.MySqlTableName}`
                 {where.Sql}
                 ORDER BY timestamp DESC
-                LIMIT {ai.MaxMessages}
+                LIMIT {msgLimit}
                 """, conn);
             foreach (var p in where.Params)
                 cmd.Parameters.AddWithValue(p.Key, p.Value);
@@ -788,8 +792,8 @@ public sealed class QsoSummaryService
                 .ToList();
 
             _logger.LogInformation(
-                "QsoSummaryService: SearchAsync({Mode}) – {Count} messages loaded, query='{Query}'",
-                allDirectContacts ? "ALL" : callsignBase, messages.Count, query);
+                "QsoSummaryService: SearchAsync({Mode}) – {Count} messages loaded (limit={Limit}), query='{Query}'",
+                allDirectContacts ? "ALL" : callsignBase, messages.Count, msgLimit, query);
 
             if (ai.LogRequests)
             {

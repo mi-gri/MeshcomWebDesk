@@ -74,6 +74,18 @@
     border-bottom-color: #ffd166;
 }
 
+@media (max-width: 600px) {
+    .app-license-text {
+        display: none;
+    }
+    .app-title--licensed {
+        background: rgba(63, 185, 80, 0.18);
+        border-radius: 4px;
+        padding: 1px 5px;
+        color: #3fb950;
+    }
+}
+
 .app-nav {
     display: flex;
     align-items: center;
@@ -124,6 +136,9 @@
         gap: 4px;
     }
     .app-version {
+        display: none;
+    }
+    .app-license-badge--unlicensed {
         display: none;
     }
     ::deep .app-nav-link {

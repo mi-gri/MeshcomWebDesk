@@ -29,28 +29,24 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 
 ---
 
-## 🆕 What's New in v1.11.0
+## 🆕 What's New in v1.12.2
 
-> 📄 [Full release notes](docs/release-notes/v1.11.0.md)
+> 📄 [Full release notes](docs/release-notes/v1.12.2.md)
 
-### 🌤️ Weather API
-Live weather data from **AWEKAS** or **Weather Underground** can now be fed directly into the telemetry JSON file and transmitted as telemetry fields via MeshCom.
+### 🔍 QRZ First Name Always Visible
+The first name from QRZ lookup is now displayed **directly next to the callsign** in the chat and monitor – no hover required.
 
-- Configure provider, station ID and API key under **Settings → 🌤️ Weather API**
-- Configurable poll interval (min. 5 minutes)
-- **Simulation provider** for offline testing (no API key required)
-- Fixed field names (`temp_out`, `humidity_out`, `pressure_rel`, …) map directly to the **Telemetry Mapping**
-- Bot command `--weather` reports provider, latest values and timestamp
-- Mutual exclusion with HTTP Telemetry API (same telemetry file)
+### 🤖 Bot: `--ping` and `--version` Work When Bot Is Disabled
+The `--ping` and `--version` commands are now accepted **even when the bot is turned off**. Useful for quick reachability checks without enabling the full bot.
 
-### 🖥️ NET Console – no-password support
-The NET Console now connects successfully even when **no password is set** on the MeshCom node.
+### 🔐 Console Command Helper: Password Fields Masked
+The `--passwd` and `--setpwd` fields are rendered as **password inputs**; values no longer appear in plain text in badges or toast notifications.
 
-### 🔐 Bugfixes
-- AWEKAS API key URL-encoding automatically resolved
-- Weather API settings persistence and decryption corrected
-- Double encryption and empty key-field overwrite prevented
-- Build no longer overwrites runtime data files
+### 🔋 Console Command Helper: Battery Voltage & Capacity
+Parsing of voltage and percentage from node status output with a visual **progress bar** for the battery charge level.
+
+### 📅 Telemetry Send Times Improved
+Limit increased to 24 entries, `*` wildcard for all hours, and validation hints for duplicates.
 
 ---
 
@@ -1428,6 +1424,29 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 ---
 
  ## 📋 Changelog
+
+ ### v1.12.2
+- **feat:** 🔍 **QRZ first name always visible** – displayed directly next to the callsign without hover
+- **feat:** 🤖 **Bot `--ping` / `--version` when bot disabled** – commands accepted even when the bot is turned off
+- **feat:** 🔐 **Console Command Helper: password fields masked** – `--passwd` and `--setpwd` rendered as `type=password`; values hidden in badges and toasts
+- **feat:** 🔋 **Console Command Helper: battery voltage & capacity** – parsing of V and % with a visual progress bar
+- **feat:** 📅 **Telemetry send times** – limit raised to 24, `*` wildcard for all hours, duplicate/validation hints
+- **fix:** 🤖 **Bot / auto-reply: min. 500 ms delay** – prevents node UDP crash on fast replies
+- **fix:** 💬 **Send button disabled at packet limit** – locked when message exceeds firmware JSON packet size
+- **fix:** 💬 **Emoji packet size** – multi-byte emojis correctly counted in size calculation
+- **fix:** 🔧 **Multi-node: new nodes register without restart** – newly configured nodes become active immediately
+- **fix:** 🔧 **Device / listen port fields read-only** – with explanatory hint in Connection and Additional Nodes settings
+- **fix:** 💬 **Enter key sends message** – line breaks require Shift+Enter
+- **fix:** 🤖 **AI search all-contacts mode: 4× message limit** – older results no longer cut off
+- **fix:** 🖥️ **VersionCommand: LI prefix removed** – formatting artefact stripped from version string output
+- **fix:** 📱 **Mobile: licence badge and map search field** – improved layout on small screens
+
+ ### v1.12.1
+- **feat:** 🔄 **Automatic update check every 24 hours** – update banner appears as soon as a new version is published on GitHub
+- **feat:** 🐳 **Docker image on GitHub Container Registry** – official multi-arch images (`linux/amd64`, `linux/arm64`) published on every release
+- **feat:** 🔖 **`--version` shows licence status** – licence callsign appended to version output
+- **fix:** 🔐 **Licence badge race condition** – `OnLicenseChanged` event triggers re-render at the correct moment
+- **fix:** 🤖 **AI: `auto` sent as model name** – literal `auto` no longer forwarded to the OpenAI API
 
  ### v1.12.0
  - **feat:** 📅 **Calendar Beacon** – scheduled event announcements sent automatically to a configured group before and/or at the event time

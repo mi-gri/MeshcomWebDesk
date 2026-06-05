@@ -179,6 +179,7 @@
         if (string.IsNullOrWhiteSpace(_text) || _text.Length > MaxLength) return;
         var expanded = await UdpService.ExpandVariablesAsync(_text, Callsign);
         var text = expanded.Length > MaxLength ? expanded[..MaxLength] : expanded;
+        if (MessageValidator.JsonEncodedLength(text) > MessageValidator.MaxJsonMsgBytes) return;
         _text = string.Empty;
         await JS.InvokeVoidAsync("meshcomChat.setSendBarValue", "send-bar-input", string.Empty);
         await OnSend.InvokeAsync(text);

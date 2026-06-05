@@ -53,6 +53,9 @@
                     @foreach (var cmd in cmds)
                     {
                         var curVal = CmdHelper.CurrentValues.TryGetValue(cmd.Name, out var v) ? v : null;
+                        var batteryPercent = cmd.Name.Equals("proz", StringComparison.OrdinalIgnoreCase)
+                            ? ParseBatteryPercent(curVal)
+                            : null;
                         <div class="cch-card @(cmd.Type == ConsoleCommandType.Toggle ? (IsOn(cmd.Name) ? "cch-card-on" : "cch-card-off") : "")">
                             <div class="cch-card-top">
                                 <code class="cch-cmd-name">--@cmd.Name</code>
@@ -62,7 +65,7 @@
                                 }
                                 else if (curVal != null)
                                 {
-                                    <span class="cch-value-badge cch-value-known">@curVal</span>
+                                    <span class="cch-value-badge cch-value-known">@(cmd.IsPassword ? "••••••••" : curVal)</span>
                                 }
                                 else
                                 {
@@ -72,6 +75,14 @@
                             <div class="cch-card-desc">
                                 @cmd.Description@(!string.IsNullOrEmpty(cmd.Unit) ? $" [{cmd.Unit}]" : "")
                             </div>
+                            @if (batteryPercent.HasValue)
+                            {
+                                <div class="cch-batt-wrap" title="@($"Batterie: {batteryPercent.Value}%")">
+                                    <div class="cch-batt-bar" role="img" aria-label="@($"Batterie {batteryPercent.Value} Prozent")">
+                                        <div class="cch-batt-fill @BatteryFillClass(batteryPercent.Value)" style="width:@($"{batteryPercent.Value}%")"></div>
+                                    </div>
+                                </div>
+                            }
                             <div class="cch-card-action">
                                 @switch (cmd.Type)
                                 {
@@ -112,7 +123,7 @@
 
                                     case ConsoleCommandType.Text:
                                         <div class="cch-input-row">
-                                            <input class="cch-input" type="text"
+                                            <input class="cch-input" type="@(cmd.IsPassword ? "password" : "text")"
                                                    @bind="_editValues[cmd.Name]"
                                                    placeholder="@cmd.Description" />
                                             @if (cmd.SuggestLocalIp)
@@ -313,6 +324,21 @@
         _                              => "▪",
     };
 
+    private static int? ParseBatteryPercent(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+        if (!int.TryParse(value.Trim().TrimEnd('%'), out var p)) return null;
+        return Math.Clamp(p, 0, 100);
+    }
+
+    private static string BatteryFillClass(int percent)
+        => percent switch
+        {
+            <= 20 => "cch-batt-fill-low",
+            <= 50 => "cch-batt-fill-mid",
+            _ => "cch-batt-fill-high",
+        };
+
     // ── Aktionen ──────────────────────────────────────────────────────────
 
     private async Task RefreshAsync()
@@ -333,7 +359,7 @@
         var val = _editValues.GetValueOrDefault(cmd.Name, string.Empty);
         if (string.IsNullOrWhiteSpace(val)) return;
         await CmdHelper.SendCommandAsync(cmd.Name, val);
-        ShowToast($"--{cmd.Name} {val}");
+        ShowToast($"--{cmd.Name} {(cmd.IsPassword ? "••••••••" : val)}");
     }
 
     private Task SendActionAsync(ConsoleCommandDef cmd)
