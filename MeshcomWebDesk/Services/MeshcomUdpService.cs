@@ -1028,31 +1028,20 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             _chatService.AddOutgoingMessage(outgoing);
 
             // Monitor whether the node echoes back the packet within 5 seconds.
-            // Only for direct messages – group/broadcast destinations never echo back.
-            // Note: destination is already stripped of '#' prefix (e.g. "9" for group #9),
-            // so we check tabKey/resolvedTabKey which still carries the '#' prefix.
-            var isGroupOrBcast = resolvedTabKey == "*" || resolvedTabKey.StartsWith('#') ||
-                                 string.Equals(resolvedTabKey, "CQCQCQ", StringComparison.OrdinalIgnoreCase);
-            if (!isGroupOrBcast)
+            // The node echoes every UDP packet it receives (direct, group, broadcast) as
+            // confirmation that it queued the message for LoRa transmission.
+            _ = Task.Run(async () =>
             {
-                _ = Task.Run(async () =>
+                await Task.Delay(TimeSpan.FromSeconds(5));
+                if (outgoing.NodeEchoReceived == null)
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(5));
-                    if (outgoing.NodeEchoReceived == null)
-                    {
-                        outgoing.NodeEchoReceived = false;
-                        _logger.LogWarning(
-                            "Node-Echo ausgeblieben – UDP-Paket wurde möglicherweise nicht vom Node empfangen. Ziel={Dst} Text=\"{Text}\"",
-                            destination, text);
-                        _chatService.NotifyEchoTimeout();
-                    }
-                });
-            }
-            else
-            {
-                // Gruppe/Broadcast: kein Echo erwartet → sofort als gesendet markieren
-                outgoing.NodeEchoReceived = true;
-            }
+                    outgoing.NodeEchoReceived = false;
+                    _logger.LogWarning(
+                        "Node-Echo ausgeblieben – UDP-Paket wurde möglicherweise nicht vom Node empfangen. Ziel={Dst} Text=\"{Text}\"",
+                        destination, text);
+                    _chatService.NotifyEchoTimeout();
+                }
+            });
         }
         catch (Exception ex)
         {
