@@ -481,21 +481,32 @@ public class ChatService
 
     public void AssignOutgoingSequence(string destination, string? sequenceNumber, Guid? nodeId)
     {
-        var messages = ResolveState(nodeId).Messages;
-        lock (_lock)
+        bool Found(IEnumerable<MeshcomMessage> messages)
         {
-            var msg = messages.LastOrDefault(m =>
-                m.IsOutgoing &&
-                (m.SequenceNumber == null || m.SequenceNumber == "TX") &&
-                string.Equals(m.To.TrimStart('#'), destination.TrimStart('#'), StringComparison.OrdinalIgnoreCase));
-            if (msg != null)
+            lock (_lock)
             {
+                var msg = messages.LastOrDefault(m =>
+                    m.IsOutgoing &&
+                    (m.SequenceNumber == null || m.SequenceNumber == "TX") &&
+                    string.Equals(m.To.TrimStart('#'), destination.TrimStart('#'), StringComparison.OrdinalIgnoreCase));
+                if (msg == null) return false;
                 // Group echoes have no {NNN} – preserve existing sequence number rather than overwriting with null
                 if (sequenceNumber != null)
                     msg.SequenceNumber = sequenceNumber;
                 msg.NodeEchoReceived = true;
+                return true;
             }
         }
+
+        // Search the node whose echo arrived first, then fall back to all other nodes.
+        // A relay echo (src_type:"lora", src=myCallsign) may arrive from a sibling node's
+        // IP, so its nodeId key differs from the state bucket that holds the outgoing message.
+        if (!Found(ResolveState(nodeId).Messages))
+        {
+            foreach (var state in _nodeState.Values)
+                if (Found(state.Messages)) break;
+        }
+
         NotifyChange();
     }
 
