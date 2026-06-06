@@ -187,19 +187,6 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                             Status.LastSnr = message.Snr;
                         }
 
-                        // When a src_type:"lora" packet arrives on a *different* node's socket but the
-                        // sender matches one of our own configured nodes, use it as a late echo
-                        // confirmation. This handles the case where the src_type:"node" UDP echo was
-                        // lost or delayed past the 5-second timeout.
-                        if (!message.IsNodePacket &&
-                            !string.Equals(message.From, myCallsign, StringComparison.OrdinalIgnoreCase))
-                        {
-                            var senderNode = _nodeManager.Nodes.FirstOrDefault(n =>
-                                string.Equals(n.Callsign, message.From, StringComparison.OrdinalIgnoreCase));
-                            if (senderNode is not null)
-                                _chatService.AssignOutgoingSequence(message.To, message.SequenceNumber, senderNode.Id);
-                        }
-
                         // Skip src_type:"node" relay echoes from foreign callsigns for regular messages.
                         // The node forwards every received LoRa packet twice – once as src_type:"node"
                         // (relay confirmation) and once as src_type:"lora" (the authoritative copy).
