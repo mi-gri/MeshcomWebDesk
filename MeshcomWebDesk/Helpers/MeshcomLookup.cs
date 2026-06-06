@@ -40,6 +40,10 @@ public static class MeshcomLookup
         51 => "T-BEAM-1W",
         52 => "HELTEC-V4",
         53 => "T-ETH-ELITE",
+        54 => "HELTEC-T114",
+        55 => "T3-S3-V1.3",
+        56 => "T-CONNECT-PRO",
+        57 => "HELTEC-WPAPER",
         null => string.Empty,
         var id => $"HW-{id}"
     };
