@@ -1028,20 +1028,29 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             _chatService.AddOutgoingMessage(outgoing);
 
             // Monitor whether the node echoes back the packet within 5 seconds.
-            // The node echoes every UDP packet it receives (direct, group, broadcast) as
-            // confirmation that it queued the message for LoRa transmission.
-            _ = Task.Run(async () =>
+            // The node only echoes direct messages – group and broadcast packets are not echoed.
+            var isGroupOrBcast = resolvedTabKey == "*" || resolvedTabKey.StartsWith('#') ||
+                                 string.Equals(resolvedTabKey, "CQCQCQ", StringComparison.OrdinalIgnoreCase);
+            if (!isGroupOrBcast)
             {
-                await Task.Delay(TimeSpan.FromSeconds(5));
-                if (outgoing.NodeEchoReceived == null)
+                _ = Task.Run(async () =>
                 {
-                    outgoing.NodeEchoReceived = false;
-                    _logger.LogWarning(
-                        "Node-Echo ausgeblieben – UDP-Paket wurde möglicherweise nicht vom Node empfangen. Ziel={Dst} Text=\"{Text}\"",
-                        destination, text);
-                    _chatService.NotifyEchoTimeout();
-                }
-            });
+                    await Task.Delay(TimeSpan.FromSeconds(5));
+                    if (outgoing.NodeEchoReceived == null)
+                    {
+                        outgoing.NodeEchoReceived = false;
+                        _logger.LogWarning(
+                            "Node-Echo ausgeblieben – UDP-Paket wurde möglicherweise nicht vom Node empfangen. Ziel={Dst} Text=\"{Text}\"",
+                            destination, text);
+                        _chatService.NotifyEchoTimeout();
+                    }
+                });
+            }
+            else
+            {
+                // Gruppe/Broadcast: kein Echo vom Node → sofort als gesendet markieren
+                outgoing.NodeEchoReceived = true;
+            }
         }
         catch (Exception ex)
         {
