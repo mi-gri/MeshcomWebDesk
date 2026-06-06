@@ -313,7 +313,12 @@ public sealed class ConsoleCommandHelperService : IDisposable
         // ── 2. Globaler Parse (nur neue Zeilen seit letztem Durchlauf) ──────
         // _globalParseFromIndex verhindert, dass historische Status-Zeilen
         // frisch gesetzte Werte (z.B. via OptimisticUpdate) überschreiben.
-        var parseStart = Math.Min(_globalParseFromIndex, snapshot.Count);
+        // When Lines has reached its 500-item cap and is cycling (RemoveAt(0) + Add),
+        // _globalParseFromIndex equals snapshot.Count and the parse loop runs 0 iterations.
+        // In that case fall back to the last index so the newly added line is still processed.
+        var parseStart = _globalParseFromIndex < snapshot.Count
+            ? _globalParseFromIndex
+            : Math.Max(0, snapshot.Count - 1);
         var changed = false;
         foreach (var def in ConsoleCommandDefinitions.All)
         {
