@@ -535,6 +535,8 @@ public class ChatService
                 {
                     msg.SequenceNumber  = sequenceNumber;
                     msg.IsAcknowledged  = true;
+                    // An ACK proves the node received and transmitted the message – clear warning triangle.
+                    msg.NodeEchoReceived = true;
                     // Accumulate delivery flags – never clear a flag that was already set.
                     if (isGateway)  msg.IsGatewayDelivered = true;
                     else            msg.IsLoraDelivered    = true;
