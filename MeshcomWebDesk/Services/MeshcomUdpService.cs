@@ -1029,30 +1029,20 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             _chatService.AddOutgoingMessage(outgoing);
 
             // Monitor whether the node echoes back the packet within 5 seconds.
-            // The node echoes both direct and group messages (group echoes have no {NNN}).
-            // Pure broadcast (*) and CQCQCQ are excluded – no echo expected there.
-            var isBcast = resolvedTabKey == "*" ||
-                          string.Equals(resolvedTabKey, "CQCQCQ", StringComparison.OrdinalIgnoreCase);
-            if (!isBcast)
+            // The node echoes every sent message (direct, group, broadcast) via src_type:"node".
+            // Group and broadcast echoes carry no {NNN} sequence number – handled in AssignOutgoingSequence.
+            _ = Task.Run(async () =>
             {
-                _ = Task.Run(async () =>
+                await Task.Delay(TimeSpan.FromSeconds(5));
+                if (outgoing.NodeEchoReceived == null)
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(5));
-                    if (outgoing.NodeEchoReceived == null)
-                    {
-                        outgoing.NodeEchoReceived = false;
-                        _logger.LogWarning(
-                            "Node-Echo ausgeblieben – UDP-Paket wurde möglicherweise nicht vom Node empfangen. Ziel={Dst} Text=\"{Text}\"",
-                            destination, text);
-                        _chatService.NotifyEchoTimeout();
-                    }
-                });
-            }
-            else
-            {
-                // Broadcast: kein Echo erwartet → sofort als gesendet markieren
-                outgoing.NodeEchoReceived = true;
-            }
+                    outgoing.NodeEchoReceived = false;
+                    _logger.LogWarning(
+                        "Node-Echo ausgeblieben – UDP-Paket wurde möglicherweise nicht vom Node empfangen. Ziel={Dst} Text=\"{Text}\"",
+                        destination, text);
+                    _chatService.NotifyEchoTimeout();
+                }
+            });
         }
         catch (Exception ex)
         {
