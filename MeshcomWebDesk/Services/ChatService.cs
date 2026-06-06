@@ -476,10 +476,10 @@ public class ChatService
     /// Assigns the node sequence number (from the echo packet) to the most recent
     /// outgoing message sent to <paramref name="destination"/> that has no sequence yet.
     /// </summary>
-    public void AssignOutgoingSequence(string destination, string sequenceNumber) =>
+    public void AssignOutgoingSequence(string destination, string? sequenceNumber) =>
         AssignOutgoingSequence(destination, sequenceNumber, null);
 
-    public void AssignOutgoingSequence(string destination, string sequenceNumber, Guid? nodeId)
+    public void AssignOutgoingSequence(string destination, string? sequenceNumber, Guid? nodeId)
     {
         var messages = ResolveState(nodeId).Messages;
         lock (_lock)
@@ -490,8 +490,10 @@ public class ChatService
                 string.Equals(m.To.TrimStart('#'), destination.TrimStart('#'), StringComparison.OrdinalIgnoreCase));
             if (msg != null)
             {
-                msg.SequenceNumber   = sequenceNumber;
-                msg.NodeEchoReceived = true;   // Node hat UDP-Paket empfangen und verarbeitet
+                // Group echoes have no {NNN} – preserve existing sequence number rather than overwriting with null
+                if (sequenceNumber != null)
+                    msg.SequenceNumber = sequenceNumber;
+                msg.NodeEchoReceived = true;
             }
         }
         NotifyChange();

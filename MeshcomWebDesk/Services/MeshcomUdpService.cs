@@ -207,9 +207,10 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                                 SetOwnPosition(message.Latitude.Value, message.Longitude.Value,
                                                message.Altitude, "Node");
                             }
-                            // Assign node-assigned sequence number to matching outgoing message
-                            if (message.SequenceNumber != null)
-                                _chatService.AssignOutgoingSequence(message.To, message.SequenceNumber, message.NodeId);
+                            // Assign node-assigned sequence number to matching outgoing message.
+                            // Group messages echo back without {NNN}, so SequenceNumber may be null –
+                            // call AssignOutgoingSequence unconditionally to still set NodeEchoReceived.
+                            _chatService.AssignOutgoingSequence(message.To, message.SequenceNumber, message.NodeId);
                             // Capture node firmware + hardware from src_type:"node" packets
                             bool metaChanged = false;
                             if (!string.IsNullOrEmpty(message.Firmware) && Status.NodeFirmware != message.Firmware)
@@ -1028,10 +1029,11 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             _chatService.AddOutgoingMessage(outgoing);
 
             // Monitor whether the node echoes back the packet within 5 seconds.
-            // The node only echoes direct messages – group and broadcast packets are not echoed.
-            var isGroupOrBcast = resolvedTabKey == "*" || resolvedTabKey.StartsWith('#') ||
-                                 string.Equals(resolvedTabKey, "CQCQCQ", StringComparison.OrdinalIgnoreCase);
-            if (!isGroupOrBcast)
+            // The node echoes both direct and group messages (group echoes have no {NNN}).
+            // Pure broadcast (*) and CQCQCQ are excluded – no echo expected there.
+            var isBcast = resolvedTabKey == "*" ||
+                          string.Equals(resolvedTabKey, "CQCQCQ", StringComparison.OrdinalIgnoreCase);
+            if (!isBcast)
             {
                 _ = Task.Run(async () =>
                 {
@@ -1048,7 +1050,7 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             }
             else
             {
-                // Gruppe/Broadcast: kein Echo vom Node → sofort als gesendet markieren
+                // Broadcast: kein Echo erwartet → sofort als gesendet markieren
                 outgoing.NodeEchoReceived = true;
             }
         }
