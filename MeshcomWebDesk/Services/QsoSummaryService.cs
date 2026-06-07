@@ -1091,7 +1091,11 @@ public sealed class QsoSummaryService
             "is_outgoing IS NOT NULL",
             "text IS NOT NULL AND text != ''",
             // Exclude all ACK messages: pattern is "CALLSIGN :ackNNN" or "CALLSIGN-N :ackNNN"
-            "text NOT LIKE '%:ack%'"
+            "text NOT LIKE '%:ack%'",
+            // Exclude raw JSON status messages (e.g. {"type":"info",...}) – no searchable content
+            "text NOT LIKE '{%'",
+            // Exclude bot commands and beacon separators (--ping, --info, ---===...===---, etc.)
+            "text NOT LIKE '--%'"
         };
 
         var parms = new Dictionary<string, object>
@@ -1156,7 +1160,9 @@ public sealed class QsoSummaryService
             "text IS NOT NULL AND text != ''",
             "text NOT LIKE '%:ack%'",
             // Exclude raw JSON status messages (e.g. {"type":"info",...}) – no searchable content
-            "text NOT LIKE '{%'"
+            "text NOT LIKE '{%'",
+            // Exclude bot commands and beacon separators (--ping, --info, ---===...===---, etc.)
+            "text NOT LIKE '--%'"
         };
 
         var parms = new Dictionary<string, object>
