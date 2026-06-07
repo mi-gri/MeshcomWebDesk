@@ -741,14 +741,17 @@ public sealed class QsoSummaryService
             await using var conn = new MySqlConnection(db.MySqlConnectionString);
             await conn.OpenAsync(ct);
 
+            // For search the time period filter is the primary constraint.
+            // MaxMessages is for QSO summary generation only.
+            // If no period is given, fall back to SummaryDays so we don't scan the entire history.
+            const int SearchSafetyCap = 5_000;
+            if (!from.HasValue && !to.HasValue)
+                from = DateTime.Now.AddDays(-(ai.SummaryDays > 0 ? ai.SummaryDays : 365));
+
             // Load messages – either all direct QSOs or a single conversation
             var where = allDirectContacts
                 ? BuildAllDirectWhere(myCallsign, from, to)
                 : BuildDirectConversationWhere(callsignBase, myCallsign, from, to, null);
-
-            // In all-contacts mode search spans many conversations over 90 days,
-            // so apply a 4× multiplier to avoid cutting off older relevant messages.
-            var msgLimit = allDirectContacts ? ai.MaxMessages * 4 : ai.MaxMessages;
 
             await using var cmd = new MySqlCommand(
                 $"""
@@ -756,7 +759,7 @@ public sealed class QsoSummaryService
                 FROM `{db.MySqlTableName}`
                 {where.Sql}
                 ORDER BY timestamp DESC
-                LIMIT {msgLimit}
+                LIMIT {SearchSafetyCap}
                 """, conn);
             foreach (var p in where.Params)
                 cmd.Parameters.AddWithValue(p.Key, p.Value);
@@ -792,8 +795,8 @@ public sealed class QsoSummaryService
                 .ToList();
 
             _logger.LogInformation(
-                "QsoSummaryService: SearchAsync({Mode}) – {Count} messages loaded (limit={Limit}), query='{Query}'",
-                allDirectContacts ? "ALL" : callsignBase, messages.Count, msgLimit, query);
+                "QsoSummaryService: SearchAsync({Mode}) – {Count} messages loaded (cap={Cap}), query='{Query}'",
+                allDirectContacts ? "ALL" : callsignBase, messages.Count, SearchSafetyCap, query);
 
             if (ai.LogRequests)
             {
