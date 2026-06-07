@@ -1340,9 +1340,9 @@ Web interface: **http://\<Linux-IP\>:5162**
 
 **Useful commands after installation:**
 ```bash
-journalctl -u meshcom-webclient -f     # live log
-systemctl status meshcom-webclient     # status
-systemctl restart meshcom-webclient    # restart after config change
+journalctl -u meshcom-webdesk -f     # live log
+systemctl status meshcom-webdesk     # status
+systemctl restart meshcom-webdesk    # restart after config change
 ```
 
 ---
