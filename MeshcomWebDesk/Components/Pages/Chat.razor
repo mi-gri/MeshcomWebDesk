@@ -804,6 +804,14 @@
                             </span>
                         </div>
                     }
+                    @if (_aiSearchTrimmedFrom.HasValue)
+                    {
+                        <div class="qso-summary-hint">
+                            ⚠️ @Loc.T(
+                                $"Ältere Nachrichten wurden wegen des Token-Limits nicht durchsucht. Berücksichtigt ab: {_aiSearchTrimmedFrom.Value:dd.MM.yyyy}. Für ältere Daten den Zeitraum einschränken.",
+                                $"Older messages were excluded due to the token limit. Searched from: {_aiSearchTrimmedFrom.Value:dd.MM.yyyy}. Narrow the time period to search older data.")
+                        </div>
+                    }
                     @if (_aiSearchError != null)
                     {
                         <div class="qso-summary-error">❌ @_aiSearchError</div>
@@ -882,9 +890,10 @@
     private DateTime? _textSearchTo;
 
     // AI Search tab state
-    private string?  _aiSearchResult;
-    private string?  _aiSearchError;
-    private bool     _aiSearchLoading;
+    private string?   _aiSearchResult;
+    private string?   _aiSearchError;
+    private bool      _aiSearchLoading;
+    private DateTime? _aiSearchTrimmedFrom;
     private string   _searchQuery = string.Empty;
     private DateTime? _searchFrom;
     private DateTime? _searchTo;
@@ -1594,6 +1603,7 @@
         _textSearchTerm       = string.Empty;
         _aiSearchResult       = null;
         _aiSearchError        = null;
+        _aiSearchTrimmedFrom  = null;
         _searchQuery          = string.Empty;
         _qsoModalTab          = 0;
         _globalSearchMode     = false;
@@ -1769,9 +1779,10 @@
             Logger.LogWarning("Chat: RunAiSearchAsync aborted – query empty or callsign null");
             return;
         }
-        _aiSearchLoading = true;
-        _aiSearchResult  = null;
-        _aiSearchError   = null;
+        _aiSearchLoading     = true;
+        _aiSearchResult      = null;
+        _aiSearchError       = null;
+        _aiSearchTrimmedFrom = null;
         StateHasChanged();
 
         var result = await QsoSummaryService.SearchAsync(
@@ -1788,7 +1799,10 @@
                 "Suche fehlgeschlagen. Bitte API-Key und Konfiguration prüfen.",
                 "Search failed. Please check API key and configuration.");
         else
-            _aiSearchResult = result;
+        {
+            _aiSearchResult      = result.Value.Answer;
+            _aiSearchTrimmedFrom = result.Value.TrimmedFrom;
+        }
 
         _aiSearchLoading = false;
         StateHasChanged();

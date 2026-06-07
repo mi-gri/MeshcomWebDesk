@@ -716,7 +716,12 @@ public sealed class QsoSummaryService
     /// When <paramref name="allDirectContacts"/> is <c>true</c>, all direct 1:1 QSOs
     /// (regardless of remote callsign) are included instead of a single conversation.
     /// </summary>
-    public async Task<string?> SearchAsync(
+    /// <summary>
+    /// Returns the AI answer and, when older messages were dropped due to the token budget,
+    /// the timestamp of the oldest message that was actually included (<c>TrimmedFrom</c>).
+    /// Returns <c>null</c> when the search could not be executed at all.
+    /// </summary>
+    public async Task<(string Answer, DateTime? TrimmedFrom)?> SearchAsync(
         string callsignBase,
         string myCallsign,
         string query,
@@ -799,6 +804,7 @@ public sealed class QsoSummaryService
             // which has significantly higher TPM limits on lower API tiers.
             const int SearchTokenTarget = 55_000;
             const int CharsPerToken = 4;
+            DateTime? trimmedFrom = null;
             var approxMsgChars = messages.Sum(m => (m.Text?.Length ?? 0) + 60); // 60 = timestamp+callsigns overhead per line
             if (approxMsgChars / CharsPerToken > SearchTokenTarget)
             {
@@ -813,9 +819,10 @@ public sealed class QsoSummaryService
                     used += size;
                 }
                 trimmed.Reverse();
+                trimmedFrom = trimmed.Count > 0 ? trimmed[0].Timestamp : (DateTime?)null;
                 _logger.LogInformation(
-                    "QsoSummaryService: SearchAsync – trimmed {Before} → {After} messages to stay under {Target} k tokens",
-                    messages.Count, trimmed.Count, SearchTokenTarget / 1000);
+                    "QsoSummaryService: SearchAsync – trimmed {Before} → {After} messages to stay under {Target} k tokens (oldest included: {From:dd.MM.yyyy})",
+                    messages.Count, trimmed.Count, SearchTokenTarget / 1000, trimmedFrom);
                 messages = trimmed;
             }
 
@@ -904,7 +911,7 @@ public sealed class QsoSummaryService
             {
                 _logger.LogWarning("QsoSummaryService: SearchAsync({Mode}) – no messages and no station data found " +
                     "(myCallsign={My})", allDirectContacts ? "ALL" : callsignBase, myCallsign);
-                return null;
+                return null; // no data at all → failure
             }
 
             // Build conversation with clear I/You perspective
@@ -1029,7 +1036,7 @@ public sealed class QsoSummaryService
                     "QsoSummaryService: SearchAsync answer (first 300 chars): {Answer}",
                     answer is null ? "(null)" : answer[..Math.Min(300, answer.Length)]);
 
-            return answer;
+            return (answer ?? string.Empty, trimmedFrom);
         }
         catch (Exception ex)
         {
