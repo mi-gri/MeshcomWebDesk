@@ -1,0 +1,19 @@
+<input type="date"
+       value="@(Value.HasValue ? Value.Value.ToString("yyyy-MM-dd") : "")"
+       @onchange="OnChanged"
+       title="@Title" />
+
+@code {
+    [Parameter] public DateTime?                Value        { get; set; }
+    [Parameter] public EventCallback<DateTime?> ValueChanged { get; set; }
+    [Parameter] public string                   Title        { get; set; } = "";
+
+    private async Task OnChanged(ChangeEventArgs e)
+    {
+        var s = e.Value?.ToString();
+        if (string.IsNullOrWhiteSpace(s))
+            await ValueChanged.InvokeAsync(null);
+        else if (DateTime.TryParse(s, out var d))
+            await ValueChanged.InvokeAsync(d);
+    }
+}
