@@ -29,24 +29,17 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 
 ---
 
-## 🆕 What's New in v1.12.2
+## 🆕 What's New in v1.12.3
 
-> 📄 [Full release notes](docs/release-notes/v1.12.2.md)
+> 📄 [Full release notes](docs/release-notes/v1.12.3.md)
 
-### 🔍 QRZ First Name Always Visible
-The first name from QRZ lookup is now displayed **directly next to the callsign** in the chat and monitor – no hover required.
-
-### 🤖 Bot: `--ping` and `--version` Work When Bot Is Disabled
-The `--ping` and `--version` commands are now accepted **even when the bot is turned off**. Useful for quick reachability checks without enabling the full bot.
-
-### 🔐 Console Command Helper: Password Fields Masked
-The `--passwd` and `--setpwd` fields are rendered as **password inputs**; values no longer appear in plain text in badges or toast notifications.
-
-### 🔋 Console Command Helper: Battery Voltage & Capacity
-Parsing of voltage and percentage from node status output with a visual **progress bar** for the battery charge level.
-
-### 📅 Telemetry Send Times Improved
-Limit increased to 24 entries, `*` wildcard for all hours, and validation hints for duplicates.
+### 🔧 Bug Fixes & Improvements
+- **AI Search**: Improved model selection and token management; messages are trimmed by token estimate to avoid rate limit errors. Warning shown when older messages were excluded, with a button to search the previous period.
+- **AI Search**: Date inputs replaced with a reusable DatePicker component.
+- **AI Search**: Bot commands and JSON system messages are excluded from AI search and summary context.
+- **Console Command Helper**: MH list and help popup added.
+- **NET Console**: Renamed from TLS Console; TLS option removed from settings.
+- **Bug fixes**: Echo-timeout warning cleared correctly on sibling-node relay echo; console lines processed correctly when the telnet line buffer wraps around.
 
 ---
 

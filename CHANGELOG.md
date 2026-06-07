@@ -1,10 +1,17 @@
 ﻿# Changelog
 
-## [1.11.1] – in development (dev)
+## [1.12.3] – in development (dev)
 
 ### Features
+- **AI Search**: Smarter token management – messages trimmed by token estimate; warning + "Search in previous period" button when older messages are excluded.
+- **AI Search**: Bot commands and JSON system messages excluded from AI search/summary context.
+- **AI Search**: Date inputs replaced with a reusable DatePicker component.
+- **Console Command Helper**: MH list and help popup added.
+- **NET Console**: Renamed from TLS Console; TLS option removed from settings.
 
 ### Bugfixes
+- Echo-timeout warning cleared correctly on sibling-node relay echo.
+- Console lines processed correctly when the telnet line buffer wraps around.
 
 ---
 
