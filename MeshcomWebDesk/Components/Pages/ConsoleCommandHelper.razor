@@ -29,6 +29,13 @@
             <button class="cch-btn cch-btn-primary" @onclick="RefreshAsync" disabled="@(!CmdHelper.IsConnected)">
                 🔄 <span class="cch-btn-label">@Loc.T("Status abrufen", "Refresh")</span>
             </button>
+            <button class="cch-btn" @onclick="ShowMhAsync" disabled="@(!CmdHelper.IsConnected)"
+                    title="@Loc.T("MHeard-Liste anzeigen", "Show MHeard list")">
+                📋 <span class="cch-btn-label">MH</span>
+            </button>
+            <button class="cch-btn" @onclick="ShowHelpAsync" disabled="@(!CmdHelper.IsConnected)">
+                ❓ <span class="cch-btn-label">Help</span>
+            </button>
             <a class="cch-btn" href="/telnet">
                 🖥️ <span class="cch-btn-label">Console</span>
             </a>
@@ -197,6 +204,88 @@
         <div class="cch-toast @(_toastIsError ? "cch-toast-error" : "")">@_toast</div>
     }
 
+    @* ── MH Popup ── *@
+    @if (_showMh)
+    {
+        <div class="cch-overlay" @onclick="() => _showMh = false">
+            <div class="mh-panel" @onclick:stopPropagation>
+                <div class="mh-header">
+                    <span>📋 MHeard</span>
+                    <button class="cch-console-close" @onclick="() => _showMh = false">✕</button>
+                </div>
+                @if (_mhEntries.Count == 0)
+                {
+                    <div class="mh-empty">@Loc.T("Warte auf Daten…", "Waiting for data…")</div>
+                }
+                else
+                {
+                    <div class="mh-table-wrap">
+                        <table class="mh-table">
+                            <thead>
+                                <tr>
+                                    <th>Call</th>
+                                    <th>@Loc.T("Datum", "Date")</th>
+                                    <th>@Loc.T("Zeit", "Time")</th>
+                                    <th>Typ</th>
+                                    <th>Hardware</th>
+                                    <th>Mod</th>
+                                    <th>RSSI</th>
+                                    <th>SNR</th>
+                                    <th>Dist</th>
+                                    <th>PL</th>
+                                    <th>M</th>
+                                    <th>NC</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var e in _mhEntries)
+                                {
+                                    <tr>
+                                        <td class="mh-call">@e.Call</td>
+                                        <td>@e.Date</td>
+                                        <td>@e.Time</td>
+                                        <td><span class="mh-typ mh-typ-@e.Typ.ToLowerInvariant()">@e.Typ</span></td>
+                                        <td class="mh-hw">@e.Hardware</td>
+                                        <td>@e.Mod</td>
+                                        <td class="@MhParser.RssiClass(e.Rssi)">@e.Rssi</td>
+                                        <td>@e.Snr</td>
+                                        <td>@e.Dist</td>
+                                        <td>@e.Pl</td>
+                                        <td>@e.M</td>
+                                        <td>@e.Nc</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    @* ── Help Popup ── *@
+    @if (_showHelp)
+    {
+        <div class="cch-overlay" @onclick="() => _showHelp = false">
+            <div class="cch-console-panel cch-help-panel" @onclick:stopPropagation>
+                <div class="cch-console-header">
+                    <span>❓ --help</span>
+                    <button class="cch-console-close" @onclick="() => _showHelp = false">✕</button>
+                </div>
+                <div class="cch-console-lines">
+                    @if (_helpDisplayLines.Count == 0)
+                    {
+                        <div class="cch-console-line cch-help-waiting">@Loc.T("Warte auf Antwort…", "Waiting for response…")</div>
+                    }
+                    @foreach (var line in _helpDisplayLines)
+                    {
+                        <div class="cch-console-line">@line</div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+
     @* ── Mini Console Popup ── *@
     @if (_showConsole)
     {
@@ -246,6 +335,13 @@
     private ElementReference _consoleEnd;
     private string? _showIpPicker;
     private List<string> _localIps = [];
+    private bool _showHelp;
+    private int _helpFromLine;
+    private List<string> _helpDisplayLines = [];
+    private bool _showMh;
+    private int _mhFromLine;
+    private List<MhEntry> _mhEntries = [];
+    private bool _mhComplete;
 
     private static List<string> GetLocalIpv4Addresses()
         => NetworkInterface.GetAllNetworkInterfaces()
@@ -294,6 +390,32 @@
             {
                 if (string.IsNullOrEmpty(_editValues.GetValueOrDefault(def.Name)))
                     _editValues[def.Name] = val;
+            }
+        }
+        var svc = CmdHelper.ActiveConsolePublic;
+        if (svc is not null && ((_showMh && !_mhComplete) || _showHelp))
+        {
+            List<string> snap;
+            lock (svc.Lines)
+                snap = [.. svc.Lines];
+            if (_showMh && !_mhComplete)
+            {
+                var entries = MhParser.Parse(snap, _mhFromLine);
+                if (entries.Count > 0)
+                {
+                    _mhEntries = entries;
+                    _mhComplete = snap.Skip(_mhFromLine).Any(l => l.TrimStart().StartsWith("\\"));
+                }
+            }
+            if (_showHelp)
+            {
+                var filtered = snap.Skip(_helpFromLine)
+                    .Where(l => string.IsNullOrWhiteSpace(l)
+                             || l.TrimStart().StartsWith("--")
+                             || l.Contains("commands", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+                if (filtered.Count > 0)
+                    _helpDisplayLines = filtered;
             }
         }
         _ = InvokeAsync(StateHasChanged);
@@ -419,6 +541,29 @@
     {
         _editValues[cmdName] = ip;
         _showIpPicker = null;
+    }
+
+    private async Task ShowHelpAsync()
+    {
+        var svc = CmdHelper.ActiveConsolePublic;
+        if (svc is null) return;
+        lock (svc.Lines)
+            _helpFromLine = svc.Lines.Count;
+        _helpDisplayLines = [];
+        _showHelp = true;
+        await CmdHelper.SendRawAsync("--help");
+    }
+
+    private async Task ShowMhAsync()
+    {
+        var svc = CmdHelper.ActiveConsolePublic;
+        if (svc is null) return;
+        lock (svc.Lines)
+            _mhFromLine = svc.Lines.Count;
+        _mhEntries = [];
+        _mhComplete = false;
+        _showMh = true;
+        await CmdHelper.SendRawAsync("--mheard");
     }
 
     private async Task ConsoleSend()

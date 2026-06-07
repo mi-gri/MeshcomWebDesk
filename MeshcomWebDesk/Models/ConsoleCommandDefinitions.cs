@@ -27,6 +27,8 @@ public static class ConsoleCommandDefinitions
         new() { Name = "setctry",       Group = ConsoleCommandGroup.LoRa, Type = ConsoleCommandType.Value,
                 Description = "RX/TX-LoRa-Parameter (Land)", Min = 0, Max = 99, Step = 1,
                 OptimisticUpdate = true },
+        new() { Name = "lora",          Group = ConsoleCommandGroup.LoRa, Type = ConsoleCommandType.Action,
+                Description = "LoRa Einstellungen anzeigen" },
 
         // ── System ───────────────────────────────────────────────────────
         new() { Name = "info",      Group = ConsoleCommandGroup.System, Type = ConsoleCommandType.Action,
@@ -181,6 +183,18 @@ public static class ConsoleCommandDefinitions
         // ── Spectrum-Scan ─────────────────────────────────────────────────
         new() { Name = "spectrum",    Group = ConsoleCommandGroup.LoRa, Type = ConsoleCommandType.Action,
                 Description = "Spektrum-Scan starten", NeedsConfirm = true },
+        new() { Name = "specstart",   Group = ConsoleCommandGroup.LoRa, Type = ConsoleCommandType.Value,
+                Description = "Scan Startfrequenz", Unit = "MHz", Min = 400, Max = 520, Step = 0.001,
+                OptimisticUpdate = true },
+        new() { Name = "specend",     Group = ConsoleCommandGroup.LoRa, Type = ConsoleCommandType.Value,
+                Description = "Scan Endfrequenz",   Unit = "MHz", Min = 400, Max = 520, Step = 0.001,
+                OptimisticUpdate = true },
+        new() { Name = "specstep",    Group = ConsoleCommandGroup.LoRa, Type = ConsoleCommandType.Value,
+                Description = "Scan Schrittweite",  Unit = "MHz", Min = 0.001, Max = 10, Step = 0.001,
+                OptimisticUpdate = true },
+        new() { Name = "specsamples", Group = ConsoleCommandGroup.LoRa, Type = ConsoleCommandType.Value,
+                Description = "Scan Samples",                     Min = 500, Max = 2048, Step = 1,
+                OptimisticUpdate = true },
 
         // ── SS ────────────────────────────────────────────────────────────
         new() { Name = "SS",          Group = ConsoleCommandGroup.Sensoren, Type = ConsoleCommandType.Toggle,

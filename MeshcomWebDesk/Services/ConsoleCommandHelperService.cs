@@ -348,7 +348,9 @@ public sealed class ConsoleCommandHelperService : IDisposable
 
         _globalParseFromIndex = snapshot.Count;
 
-        if (changed)
+        // Immer feuern wenn neue Zeilen ankamen – nicht nur bei Wertänderung.
+        // Ermöglicht MH/Help-Popups im CCH, die keine ParsePattern-Treffer haben.
+        if (changed || parseStart < snapshot.Count)
             OnChange?.Invoke();
 
         // ── 3. Spektrum-Parser (Snapshot-basiert, robust gegen Lines.RemoveAt) ──

@@ -2998,6 +2998,27 @@ h1:focus {
 .ota-progress{height:6px;background:#30363d;border-radius:3px;overflow:hidden}
 .ota-progress-bar{height:100%;background:linear-gradient(90deg,#238636,#58a6ff);border-radius:3px;transition:width .9s linear}
 
+/* ── MHeard Popup ─────────────────────────────────────────────────────── */
+.mh-panel{background:#161b22;border:1px solid #30363d;border-radius:10px;width:min(900px,96vw);max-height:80vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 32px #000a}
+.mh-header{display:flex;align-items:center;justify-content:space-between;padding:.5rem .75rem;border-bottom:1px solid #21262d;font-weight:600;color:#c9d1d9;font-size:.9rem;flex-shrink:0}
+.mh-empty{padding:1.5rem;text-align:center;color:#8b949e;font-style:italic}
+.mh-table-wrap{overflow:auto;flex:1}
+.mh-table{width:100%;border-collapse:collapse;font-size:.82rem;font-family:'Courier New',Consolas,monospace;color:#c9d1d9}
+.mh-table th{background:#21262d;color:#8b949e;font-weight:600;padding:.3rem .6rem;text-align:left;white-space:nowrap;position:sticky;top:0}
+.mh-table td{padding:.25rem .6rem;border-bottom:1px solid #21262d;white-space:nowrap}
+.mh-table tr:hover td{background:#1c2128}
+.mh-call{color:#58a6ff;font-weight:600}
+.mh-hw{color:#8b949e;font-size:.78rem}
+.mh-typ{padding:.1rem .35rem;border-radius:4px;font-size:.75rem;font-weight:600}
+.mh-typ-txt{background:#1f4a7a;color:#79c0ff}
+.mh-typ-pos{background:#1a4731;color:#56d364}
+.mh-typ-hey{background:#3d2a0a;color:#e3b341}
+.mh-typ-ack{background:#2d2d2d;color:#8b949e}
+.mh-rssi-strong{color:#56d364}
+.mh-rssi-good{color:#a5d6a7}
+.mh-rssi-weak{color:#e3b341}
+.mh-rssi-bad{color:#f85149}
+
 /* ── Node switcher bar (Chat.razor) ───────────────────────────────────── */
 .node-switcher-bar{display:flex;gap:.4rem;padding:.35rem .75rem;background:#0d1117;border-bottom:1px solid #21262d;flex-wrap:wrap}
 .node-switcher-btn{font-size:.8em;padding:2px 12px;border-radius:12px;border:1px solid #30363d;background:#21262d;color:#8b949e;cursor:pointer;transition:background .15s,color .15s;display:inline-flex;align-items:center;gap:5px}
@@ -3524,6 +3545,10 @@ details[open] .cch-group-title::before { transform: rotate(90deg); }
     background: #161b22;
 }
 .cch-console-input { font-family: monospace; font-size: .82rem; }
+
+/* Help panel */
+.cch-help-panel { width: min(740px, 96vw); max-height: 80vh; }
+.cch-help-waiting { color: #8b949e; font-style: italic; }
 
 /* Error toast */
 .cch-toast-error { background: #b91c1c; color: #fff; max-width: min(480px, 90vw); white-space: normal; text-align: center; }
