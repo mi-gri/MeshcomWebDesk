@@ -207,9 +207,10 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
                                 SetOwnPosition(message.Latitude.Value, message.Longitude.Value,
                                                message.Altitude, "Node");
                             }
-                            // Assign node-assigned sequence number to matching outgoing message
-                            if (message.SequenceNumber != null)
-                                _chatService.AssignOutgoingSequence(message.To, message.SequenceNumber, message.NodeId);
+                            // Assign node-assigned sequence number to matching outgoing message.
+                            // Group messages echo back without {NNN}, so SequenceNumber may be null –
+                            // call AssignOutgoingSequence unconditionally to still set NodeEchoReceived.
+                            _chatService.AssignOutgoingSequence(message.To, message.SequenceNumber, message.NodeId);
                             // Capture node firmware + hardware from src_type:"node" packets
                             bool metaChanged = false;
                             if (!string.IsNullOrEmpty(message.Firmware) && Status.NodeFirmware != message.Firmware)
@@ -429,6 +430,15 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
 
             var reply = await _botCommandService.ExecuteAsync(message.Text!, message.From, message);
             reply = await ExpandVariablesAsync(reply, message.From, before: message.Timestamp);
+
+            if (string.IsNullOrWhiteSpace(reply))
+            {
+                _logger.LogWarning(
+                    "Bot: reply is empty after variable expansion for '{Cmd}' from {From}. " +
+                    "If using {{telemetry}}, verify TelemetryFilePath is set and writable.",
+                    message.Text, message.From);
+                reply = _settings.Language == "en" ? "(no data)" : "(keine Daten)";
+            }
 
             var parts = SplitMessage(reply);
             _logger.LogInformation("Bot reply to {From} via node {NodeId} ({Parts} part(s)): {Preview}",
@@ -806,11 +816,11 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
     {
         ownTemp = null; ownHumidity = null; ownPressure = null;
 
-        if (!File.Exists(s.TelemetryFilePath))
-            return null;
-
         try
         {
+            if (string.IsNullOrWhiteSpace(s.TelemetryFilePath) || !File.Exists(s.TelemetryFilePath))
+                return null;
+
             var fileContent = File.ReadAllText(s.TelemetryFilePath);
             using var doc = JsonDocument.Parse(fileContent);
             var root  = doc.RootElement;
@@ -1028,31 +1038,20 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             _chatService.AddOutgoingMessage(outgoing);
 
             // Monitor whether the node echoes back the packet within 5 seconds.
-            // Only for direct messages – group/broadcast destinations never echo back.
-            // Note: destination is already stripped of '#' prefix (e.g. "9" for group #9),
-            // so we check tabKey/resolvedTabKey which still carries the '#' prefix.
-            var isGroupOrBcast = resolvedTabKey == "*" || resolvedTabKey.StartsWith('#') ||
-                                 string.Equals(resolvedTabKey, "CQCQCQ", StringComparison.OrdinalIgnoreCase);
-            if (!isGroupOrBcast)
+            // The node echoes every sent message (direct, group, broadcast) via src_type:"node".
+            // Group and broadcast echoes carry no {NNN} sequence number – handled in AssignOutgoingSequence.
+            _ = Task.Run(async () =>
             {
-                _ = Task.Run(async () =>
+                await Task.Delay(TimeSpan.FromSeconds(5));
+                if (outgoing.NodeEchoReceived == null)
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(5));
-                    if (outgoing.NodeEchoReceived == null)
-                    {
-                        outgoing.NodeEchoReceived = false;
-                        _logger.LogWarning(
-                            "Node-Echo ausgeblieben – UDP-Paket wurde möglicherweise nicht vom Node empfangen. Ziel={Dst} Text=\"{Text}\"",
-                            destination, text);
-                        _chatService.NotifyEchoTimeout();
-                    }
-                });
-            }
-            else
-            {
-                // Gruppe/Broadcast: kein Echo erwartet → sofort als gesendet markieren
-                outgoing.NodeEchoReceived = true;
-            }
+                    outgoing.NodeEchoReceived = false;
+                    _logger.LogWarning(
+                        "Node-Echo ausgeblieben – UDP-Paket wurde möglicherweise nicht vom Node empfangen. Ziel={Dst} Text=\"{Text}\"",
+                        destination, text);
+                    _chatService.NotifyEchoTimeout();
+                }
+            });
         }
         catch (Exception ex)
         {

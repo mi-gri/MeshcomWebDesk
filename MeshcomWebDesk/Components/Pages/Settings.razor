@@ -417,12 +417,6 @@
                 <label>@Loc.T("Modus", "Mode")</label>
                 <div style="display:flex; gap:1rem; align-items:center;">
                     <label style="display:flex; gap:.3rem; align-items:center; cursor:pointer;">
-                        <input type="radio" name="consoleMode" value="tls"
-                               checked="@(_model.ConsoleMode == "tls")"
-                               @onchange="@(() => _model.ConsoleMode = "tls")" />
-                        🔒 TLS Console
-                    </label>
-                    <label style="display:flex; gap:.3rem; align-items:center; cursor:pointer;">
                         <input type="radio" name="consoleMode" value="serial"
                                checked="@(_model.ConsoleMode == "serial")"
                                @onchange="@(() => _model.ConsoleMode = "serial")" />
@@ -436,56 +430,7 @@
                     </label>
                 </div>
 
-                @if (_model.ConsoleMode == "tls")
-                {
-                    <label>@Loc.T("Port", "Port")</label>
-                    <input type="number" @bind="_model.TelnetPort" min="1" max="65535" />
-
-                    <label>@Loc.T("Passwort", "Password")</label>
-                    <input type="password" @bind="_model.TelnetPassword" placeholder="••••••••" autocomplete="new-password" />
-
-                    <label>
-                        @Loc.T("Zertifikat-Fingerprint (SHA-256)", "Certificate Fingerprint (SHA-256)")<br />
-                        <small>@Loc.T("Leer = beim ersten Verbinden anzeigen und bestätigen", "Empty = show and confirm on first connect")</small>
-                    </label>
-                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                        <input type="text" @bind="_model.TelnetCertThumbprint"
-                               placeholder="AA:BB:CC:…"
-                               style="flex:1; min-width:200px; font-family:monospace; font-size:11px;" />
-                        @if (!string.IsNullOrEmpty(_model.TelnetCertThumbprint))
-                        {
-                            <button class="btn-danger" style="padding:2px 8px; font-size:11px;"
-                                    @onclick="() => _model.TelnetCertThumbprint = string.Empty"
-                                    title="@Loc.T("Fingerprint löschen (nächster Connect = First-Connect-Modus)", "Clear fingerprint (next connect = first-connect mode)")">
-                                🗑
-                            </button>
-                        }
-                    </div>
-
-                    @if (!string.IsNullOrEmpty(_telnetUnknownCert))
-                    {
-                        <span></span>
-                        <div class="settings-warn" style="margin-top:0">
-                            <strong>@Loc.T("Unbekanntes Zertifikat", "Unknown Certificate")</strong><br />
-                            <span style="font-family:monospace; font-size:11px; word-break:break-all;">@_telnetUnknownCert</span><br />
-                            <div style="display:flex; gap:8px; margin-top:6px;">
-                                <button class="btn-primary" @onclick="TrustTelnetCertAsync">
-                                    ✅ @Loc.T("Vertrauen & speichern", "Trust & save")
-                                </button>
-                                <button class="btn-secondary" @onclick="() => _telnetUnknownCert = null">
-                                    ✖ @Loc.T("Abbrechen", "Cancel")
-                                </button>
-                            </div>
-                        </div>
-                    }
-
-                    <span></span>
-                    <div style="font-size:.8rem; color:#8b949e;">
-                        @Loc.T("Voraussetzung: Auf dem Node muss 'enable Telnet console' (Port 2323) aktiviert sein.",
-                               "Requirement: The node must have 'enable Telnet console' (port 2323) enabled.")
-                    </div>
-                }
-                else if (_model.ConsoleMode == "hmac")
+                @if (_model.ConsoleMode == "hmac")
                 {
                     <label>@Loc.T("Port", "Port")</label>
                     <input type="number" @bind="_model.TelnetPort" min="1" max="65535" />
@@ -977,7 +922,7 @@
                 </label>
 
                 <label>@Loc.T("JSON-Datei", "JSON File")</label>
-                <input type="text" @bind="_model.TelemetryFilePath" placeholder="C:\Temp\telemetry.json" />
+                <input type="text" @bind="_model.TelemetryFilePath" placeholder="data/telemetry.json" />
 
                 <label>
                     @Loc.T("Ziel", "Target")<br />
@@ -1942,7 +1887,7 @@
                     <div style="font-size:11px;color:#8b949e;margin-top:2px">@Loc.T("Nachrichten der letzten X Tage werden ausgewertet. 0 = alle verfügbaren.", "Messages from the last X days are evaluated. 0 = all available.")</div>
                 </div>
 
-                <label>@Loc.T("Max. Nachrichten", "Max. messages")</label>
+                <label>@Loc.T("Max. Nachrichten (Zusammenfassung)", "Max. messages for AI summary")</label>
                 <input type="number" min="10" max="500" @bind="_model.AiMaxMessages" />
 
                 <label>@Loc.T("API-Anfragen loggen", "Log API requests")</label>
@@ -2872,7 +2817,7 @@
             GatewayHighlightEnabled = s.GatewayHighlightEnabled,
             GatewayServer           = s.GatewayServer,
             TelnetEnabled           = s.TelnetEnabled,
-            ConsoleMode             = s.ConsoleMode,
+            ConsoleMode             = s.ConsoleMode == "tls" ? "hmac" : s.ConsoleMode,
             TelnetPort              = s.TelnetPort,
             TelnetPassword          = s.TelnetPassword,
             TelnetCertThumbprint    = s.TelnetCertThumbprint,
@@ -3436,7 +3381,7 @@
                 GatewayHighlightEnabled = s.GatewayHighlightEnabled,
                 GatewayServer           = s.GatewayServer,
                 TelnetEnabled           = s.TelnetEnabled,
-                ConsoleMode             = s.ConsoleMode,
+                ConsoleMode             = s.ConsoleMode == "tls" ? "hmac" : s.ConsoleMode,
                 TelnetPort              = s.TelnetPort,
                 TelnetPassword          = s.TelnetPassword,
                 TelnetCertThumbprint    = s.TelnetCertThumbprint,
@@ -3565,7 +3510,7 @@
         public bool   GatewayHighlightEnabled  { get; set; } = true;
         public string GatewayServer            { get; set; } = "oe";
         public bool   TelnetEnabled            { get; set; } = false;
-        public string ConsoleMode             { get; set; } = "tls";
+        public string ConsoleMode             { get; set; } = "hmac";
         public int    TelnetPort              { get; set; } = 2323;
         public string TelnetPassword          { get; set; } = string.Empty;
         public string TelnetCertThumbprint    { get; set; } = string.Empty;

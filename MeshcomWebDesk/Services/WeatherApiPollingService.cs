@@ -173,10 +173,22 @@ public sealed class WeatherApiPollingService : IHostedService, IAsyncDisposable
         var json = JsonSerializer.Serialize(output, new JsonSerializerOptions { WriteIndented = true });
 
         var dir = Path.GetDirectoryName(mainSettings.TelemetryFilePath);
-        if (!string.IsNullOrWhiteSpace(dir))
-            Directory.CreateDirectory(dir);
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(dir))
+                Directory.CreateDirectory(dir);
 
-        await File.WriteAllTextAsync(mainSettings.TelemetryFilePath, json, System.Text.Encoding.UTF8, ct);
+            await File.WriteAllTextAsync(mainSettings.TelemetryFilePath, json, System.Text.Encoding.UTF8, ct);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            LastError = $"TelemetryFilePath nicht beschreibbar: {mainSettings.TelemetryFilePath}";
+            _logger.LogError(
+                "WeatherApi: cannot write to TelemetryFilePath '{Path}' – access denied. " +
+                "Use a relative path (e.g. 'data/telemetry.json') or a path the service account can write to. " +
+                "Error: {Message}", mainSettings.TelemetryFilePath, ex.Message);
+            return;
+        }
 
         _logger.LogInformation("WeatherApi: wrote {Count} fields to {Path}",
             data.Fields.Count, mainSettings.TelemetryFilePath);

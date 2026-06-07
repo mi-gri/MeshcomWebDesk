@@ -30,13 +30,16 @@ RUN apt-get update \
 
 COPY --from=build /app/publish .
 
-# Default log directory (mount a volume to persist logs)
-RUN mkdir -p /app/logs
+# Pre-create writable data directories so the app starts cleanly even when
+# running as a non-root user or before a bind-mount is populated by Docker.
+RUN mkdir -p /app/logs /app/data /app/keys \
+    && chmod 777 /app/logs /app/data /app/keys
 
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV ASPNETCORE_URLS=http://+:5162
 ENV DOTNET_RUNNING_IN_CONTAINER=true
 ENV Meshcom__LogPath=/app/logs
+ENV Meshcom__DataPath=/app/data
 ENV TZ=Europe/Berlin
 
 EXPOSE 5162

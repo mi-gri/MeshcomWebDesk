@@ -716,7 +716,12 @@ public sealed class QsoSummaryService
     /// When <paramref name="allDirectContacts"/> is <c>true</c>, all direct 1:1 QSOs
     /// (regardless of remote callsign) are included instead of a single conversation.
     /// </summary>
-    public async Task<string?> SearchAsync(
+    /// <summary>
+    /// Returns the AI answer and, when older messages were dropped due to the token budget,
+    /// the timestamp of the oldest message that was actually included (<c>TrimmedFrom</c>).
+    /// Returns <c>null</c> when the search could not be executed at all.
+    /// </summary>
+    public async Task<(string Answer, DateTime? TrimmedFrom)?> SearchAsync(
         string callsignBase,
         string myCallsign,
         string query,
@@ -741,14 +746,17 @@ public sealed class QsoSummaryService
             await using var conn = new MySqlConnection(db.MySqlConnectionString);
             await conn.OpenAsync(ct);
 
+            // For search the time period filter is the primary constraint.
+            // MaxMessages is for QSO summary generation only.
+            // If no period is given, fall back to SummaryDays so we don't scan the entire history.
+            const int SearchSafetyCap = 5_000;
+            if (!from.HasValue && !to.HasValue)
+                from = DateTime.Now.AddDays(-(ai.SummaryDays > 0 ? ai.SummaryDays : 365));
+
             // Load messages – either all direct QSOs or a single conversation
             var where = allDirectContacts
                 ? BuildAllDirectWhere(myCallsign, from, to)
                 : BuildDirectConversationWhere(callsignBase, myCallsign, from, to, null);
-
-            // In all-contacts mode search spans many conversations over 90 days,
-            // so apply a 4× multiplier to avoid cutting off older relevant messages.
-            var msgLimit = allDirectContacts ? ai.MaxMessages * 4 : ai.MaxMessages;
 
             await using var cmd = new MySqlCommand(
                 $"""
@@ -756,7 +764,7 @@ public sealed class QsoSummaryService
                 FROM `{db.MySqlTableName}`
                 {where.Sql}
                 ORDER BY timestamp DESC
-                LIMIT {msgLimit}
+                LIMIT {SearchSafetyCap}
                 """, conn);
             foreach (var p in where.Params)
                 cmd.Parameters.AddWithValue(p.Key, p.Value);
@@ -791,9 +799,36 @@ public sealed class QsoSummaryService
                 .OrderBy(m => m.Timestamp)
                 .ToList();
 
+            // Trim oldest messages so the estimated prompt stays below the auto-model
+            // threshold for gpt-4.1 (>60 k tokens). Keeps us in gpt-4.1-mini territory
+            // which has significantly higher TPM limits on lower API tiers.
+            const int SearchTokenTarget = 55_000;
+            const int CharsPerToken = 4;
+            DateTime? trimmedFrom = null;
+            var approxMsgChars = messages.Sum(m => (m.Text?.Length ?? 0) + 60); // 60 = timestamp+callsigns overhead per line
+            if (approxMsgChars / CharsPerToken > SearchTokenTarget)
+            {
+                var budget = SearchTokenTarget * CharsPerToken;
+                var trimmed = new List<RawMessage>(messages.Count);
+                int used = 0;
+                foreach (var m in messages.AsEnumerable().Reverse()) // keep newest
+                {
+                    var size = (m.Text?.Length ?? 0) + 60;
+                    if (used + size > budget) break;
+                    trimmed.Add(m);
+                    used += size;
+                }
+                trimmed.Reverse();
+                trimmedFrom = trimmed.Count > 0 ? trimmed[0].Timestamp : (DateTime?)null;
+                _logger.LogInformation(
+                    "QsoSummaryService: SearchAsync – trimmed {Before} → {After} messages to stay under {Target} k tokens (oldest included: {From:dd.MM.yyyy})",
+                    messages.Count, trimmed.Count, SearchTokenTarget / 1000, trimmedFrom);
+                messages = trimmed;
+            }
+
             _logger.LogInformation(
-                "QsoSummaryService: SearchAsync({Mode}) – {Count} messages loaded (limit={Limit}), query='{Query}'",
-                allDirectContacts ? "ALL" : callsignBase, messages.Count, msgLimit, query);
+                "QsoSummaryService: SearchAsync({Mode}) – {Count} messages loaded (cap={Cap}), query='{Query}'",
+                allDirectContacts ? "ALL" : callsignBase, messages.Count, SearchSafetyCap, query);
 
             if (ai.LogRequests)
             {
@@ -876,7 +911,7 @@ public sealed class QsoSummaryService
             {
                 _logger.LogWarning("QsoSummaryService: SearchAsync({Mode}) – no messages and no station data found " +
                     "(myCallsign={My})", allDirectContacts ? "ALL" : callsignBase, myCallsign);
-                return null;
+                return null; // no data at all → failure
             }
 
             // Build conversation with clear I/You perspective
@@ -1001,7 +1036,7 @@ public sealed class QsoSummaryService
                     "QsoSummaryService: SearchAsync answer (first 300 chars): {Answer}",
                     answer is null ? "(null)" : answer[..Math.Min(300, answer.Length)]);
 
-            return answer;
+            return (answer ?? string.Empty, trimmedFrom);
         }
         catch (Exception ex)
         {
@@ -1056,7 +1091,11 @@ public sealed class QsoSummaryService
             "is_outgoing IS NOT NULL",
             "text IS NOT NULL AND text != ''",
             // Exclude all ACK messages: pattern is "CALLSIGN :ackNNN" or "CALLSIGN-N :ackNNN"
-            "text NOT LIKE '%:ack%'"
+            "text NOT LIKE '%:ack%'",
+            // Exclude raw JSON status messages (e.g. {"type":"info",...}) – no searchable content
+            "text NOT LIKE '{%'",
+            // Exclude bot commands and beacon separators (--ping, --info, ---===...===---, etc.)
+            "text NOT LIKE '--%'"
         };
 
         var parms = new Dictionary<string, object>
@@ -1121,7 +1160,9 @@ public sealed class QsoSummaryService
             "text IS NOT NULL AND text != ''",
             "text NOT LIKE '%:ack%'",
             // Exclude raw JSON status messages (e.g. {"type":"info",...}) – no searchable content
-            "text NOT LIKE '{%'"
+            "text NOT LIKE '{%'",
+            // Exclude bot commands and beacon separators (--ping, --info, ---===...===---, etc.)
+            "text NOT LIKE '--%'"
         };
 
         var parms = new Dictionary<string, object>

@@ -633,9 +633,9 @@
             @if (_qsoModalTab == 1)
             {
                 <div class="qso-history-filter">
-                    <input type="date" @bind="_historyFrom" title="@Loc.T("Von", "From")" />
+                    <DatePicker @bind-Value="_historyFrom" Title="@Loc.T("Von", "From")" />
                     <span>–</span>
-                    <input type="date" @bind="_historyTo" title="@Loc.T("Bis", "To")" />
+                    <DatePicker @bind-Value="_historyTo" Title="@Loc.T("Bis", "To")" />
                     <input type="text" @bind="_historyTextFilter" @bind:event="oninput"
                            placeholder="@Loc.T("Suchbegriff…", "Search term…")" />
                     <button class="btn-action" @onclick="LoadHistoryAsync">🔎</button>
@@ -689,9 +689,9 @@
             @if (_qsoModalTab == 2)
             {
                 <div class="qso-history-filter">
-                    <input type="date" @bind="_textSearchFrom" title="@Loc.T("Von", "From")" />
+                    <DatePicker @bind-Value="_textSearchFrom" Title="@Loc.T("Von", "From")" />
                     <span>–</span>
-                    <input type="date" @bind="_textSearchTo" title="@Loc.T("Bis", "To")" />
+                    <DatePicker @bind-Value="_textSearchTo" Title="@Loc.T("Bis", "To")" />
                     <input type="text" @bind="_textSearchTerm" @bind:event="oninput"
                            @onkeydown="OnTextSearchKeyDown"
                            placeholder="@Loc.T("Suchbegriff eingeben und Enter", "Enter search term and press Enter")" />
@@ -751,9 +751,9 @@
             {
                 <div class="qso-history-filter">
                     <span style="color:#8b949e;font-size:11px">@Loc.T("Zeitraum (optional):", "Period (optional):")</span>
-                    <input type="date" @bind="_searchFrom" title="@Loc.T("Von", "From")" />
+                    <DatePicker @bind-Value="_searchFrom" Title="@Loc.T("Von", "From")" />
                     <span>–</span>
-                    <input type="date" @bind="_searchTo" title="@Loc.T("Bis", "To")" />
+                    <DatePicker @bind-Value="_searchTo" Title="@Loc.T("Bis", "To")" />
                     @if (_searchFrom.HasValue || _searchTo.HasValue)
                     {
                         <button class="btn-cancel" @onclick="() => { _searchFrom = null; _searchTo = null; }">✕</button>
@@ -802,6 +802,20 @@
                                         "Ask a question about the conversation. The AI searches all messages and cites exact timestamps.")
                                 }
                             </span>
+                        </div>
+                    }
+                    @if (_aiSearchTrimmedFrom.HasValue)
+                    {
+                        <div class="qso-summary-hint" style="flex-direction:column;align-items:flex-start;gap:6px">
+                            <span>
+                                ⚠️ @Loc.T(
+                                    $"Ältere Nachrichten (vor {_aiSearchTrimmedFrom.Value:dd.MM.yyyy}) wurden wegen des Token-Limits nicht durchsucht.",
+                                    $"Older messages (before {_aiSearchTrimmedFrom.Value:dd.MM.yyyy}) were excluded due to the token limit.")
+                            </span>
+                            <button class="btn-action" style="font-size:11px;padding:3px 10px"
+                                    @onclick="SearchPreviousPeriodAsync">
+                                🔍 @Loc.T("Im vorherigen Zeitraum suchen", "Search in previous period")
+                            </button>
                         </div>
                     }
                     @if (_aiSearchError != null)
@@ -882,9 +896,10 @@
     private DateTime? _textSearchTo;
 
     // AI Search tab state
-    private string?  _aiSearchResult;
-    private string?  _aiSearchError;
-    private bool     _aiSearchLoading;
+    private string?   _aiSearchResult;
+    private string?   _aiSearchError;
+    private bool      _aiSearchLoading;
+    private DateTime? _aiSearchTrimmedFrom;
     private string   _searchQuery = string.Empty;
     private DateTime? _searchFrom;
     private DateTime? _searchTo;
@@ -1594,6 +1609,7 @@
         _textSearchTerm       = string.Empty;
         _aiSearchResult       = null;
         _aiSearchError        = null;
+        _aiSearchTrimmedFrom  = null;
         _searchQuery          = string.Empty;
         _qsoModalTab          = 0;
         _globalSearchMode     = false;
@@ -1769,9 +1785,10 @@
             Logger.LogWarning("Chat: RunAiSearchAsync aborted – query empty or callsign null");
             return;
         }
-        _aiSearchLoading = true;
-        _aiSearchResult  = null;
-        _aiSearchError   = null;
+        _aiSearchLoading     = true;
+        _aiSearchResult      = null;
+        _aiSearchError       = null;
+        _aiSearchTrimmedFrom = null;
         StateHasChanged();
 
         var result = await QsoSummaryService.SearchAsync(
@@ -1788,10 +1805,21 @@
                 "Suche fehlgeschlagen. Bitte API-Key und Konfiguration prüfen.",
                 "Search failed. Please check API key and configuration.");
         else
-            _aiSearchResult = result;
+        {
+            _aiSearchResult      = result.Value.Answer;
+            _aiSearchTrimmedFrom = result.Value.TrimmedFrom;
+        }
 
         _aiSearchLoading = false;
         StateHasChanged();
+    }
+
+    private async Task SearchPreviousPeriodAsync()
+    {
+        // Shift the upper bound to just before the oldest included message so the
+        // next search covers the period that was excluded due to the token limit.
+        _searchTo = _aiSearchTrimmedFrom!.Value.AddDays(-1);
+        await RunAiSearchAsync();
     }
 
     private async Task OnSearchKeyDown(KeyboardEventArgs e)

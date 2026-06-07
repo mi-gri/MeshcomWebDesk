@@ -19,7 +19,7 @@ A **Blazor Server** web application for communicating with a [MeshCom 4.0](https
 Built with **.NET 10** and **Blazor Interactive Server**.
 
 > **MeshCom Firmware:** Compatible with [icssw-org/MeshCom-Firmware](https://github.com/icssw-org/MeshCom-Firmware) v4.35+  
-> Hardware IDs 1–53 supported (`TLORA`, `T-BEAM`, `T-ECHO`, `T-DECK`, `T-DECK-PLUS`, `T-DECK-PRO`, `T-ETH-ELITE`, `HELTEC-V1`–`V4`, `RAK4631`, `EBYTE-E22`, `T5-EPAPER`, …)
+> Hardware IDs 1–57 supported (`TLORA`, `T-BEAM`, `T-ECHO`, `T-DECK`, `T-DECK-PLUS`, `T-DECK-PRO`, `T-ETH-ELITE`, `HELTEC-V1`–`V4`, `HELTEC-T114`, `HELTEC-WPAPER`, `RAK4631`, `EBYTE-E22`, `T5-EPAPER`, `T3-S3`, `T-CONNECT-PRO`, …)
 
 > 💾 **Ready-to-run binaries** (Windows & Linux) – no build required:  
 > 👉 [**Download latest release**](https://github.com/DH1FR/MeshcomWebDesk/releases/latest)
@@ -29,24 +29,17 @@ Built with **.NET 10** and **Blazor Interactive Server**.
 
 ---
 
-## 🆕 What's New in v1.12.2
+## 🆕 What's New in v1.12.3
 
-> 📄 [Full release notes](docs/release-notes/v1.12.2.md)
+> 📄 [Full release notes](docs/release-notes/v1.12.3.md)
 
-### 🔍 QRZ First Name Always Visible
-The first name from QRZ lookup is now displayed **directly next to the callsign** in the chat and monitor – no hover required.
-
-### 🤖 Bot: `--ping` and `--version` Work When Bot Is Disabled
-The `--ping` and `--version` commands are now accepted **even when the bot is turned off**. Useful for quick reachability checks without enabling the full bot.
-
-### 🔐 Console Command Helper: Password Fields Masked
-The `--passwd` and `--setpwd` fields are rendered as **password inputs**; values no longer appear in plain text in badges or toast notifications.
-
-### 🔋 Console Command Helper: Battery Voltage & Capacity
-Parsing of voltage and percentage from node status output with a visual **progress bar** for the battery charge level.
-
-### 📅 Telemetry Send Times Improved
-Limit increased to 24 entries, `*` wildcard for all hours, and validation hints for duplicates.
+### 🔧 Bug Fixes & Improvements
+- **AI Search**: Improved model selection and token management; messages are trimmed by token estimate to avoid rate limit errors. Warning shown when older messages were excluded, with a button to search the previous period.
+- **AI Search**: Date inputs replaced with a reusable DatePicker component.
+- **AI Search**: Bot commands and JSON system messages are excluded from AI search and summary context.
+- **Console Command Helper**: MH list and help popup added.
+- **NET Console**: Renamed from TLS Console; TLS option removed from settings.
+- **Bug fixes**: Echo-timeout warning cleared correctly on sibling-node relay echo; console lines processed correctly when the telnet line buffer wraps around.
 
 ---
 
@@ -921,6 +914,12 @@ This client communicates with the MeshCom node using the **EXTUDP JSON protocol*
 | 50 | T-DECK-PRO | LilyGO T-Deck Pro |
 | 51 | T-BEAM-1W | LilyGO T-Beam 1W |
 | 52 | HELTEC-V4 | Heltec WiFi LoRa 32 v4 |
+| 40 | T5-EPAPER | LilyGO T5 E-Paper |
+| 53 | T-ETH-ELITE | LilyGO T-ETH Elite S3 |
+| 54 | HELTEC-T114 | Heltec T114 |
+| 55 | T3-S3-V1.3 | LilyGO T3-S3 v1.3 |
+| 56 | T-CONNECT-PRO | LilyGO T-Connect Pro |
+| 57 | HELTEC-WPAPER | Heltec Wireless Paper |
 
 > **Note:** Altitude in position packets follows APRS convention (feet). The client converts to metres automatically.
 
@@ -1341,9 +1340,9 @@ Web interface: **http://\<Linux-IP\>:5162**
 
 **Useful commands after installation:**
 ```bash
-journalctl -u meshcom-webclient -f     # live log
-systemctl status meshcom-webclient     # status
-systemctl restart meshcom-webclient    # restart after config change
+journalctl -u meshcom-webdesk -f     # live log
+systemctl status meshcom-webdesk     # status
+systemctl restart meshcom-webdesk    # restart after config change
 ```
 
 ---
@@ -1469,6 +1468,16 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 ---
 
  ## 📋 Changelog
+
+ ### v1.12.3 *(in development)*
+- **feat:** 🔍 **AI Search: smarter token management** – messages trimmed by token estimate to avoid rate-limit errors; warning shown when older messages are excluded; "Search in previous period" button to continue the search further back
+- **feat:** 🔍 **AI Search: noise filter** – bot commands and JSON system messages excluded from AI search and summary context
+- **feat:** 📅 **DatePicker component** – reusable date picker used in AI search date fields
+- **feat:** 🖥️ **Console Command Helper: MH list & help popup** – quick access to MH list and help directly from the console view
+- **feat:** 🔧 **New hardware IDs 54–57** – HELTEC-T114, T3-S3-V1.3, T-CONNECT-PRO, HELTEC-WPAPER
+- **fix:** 🔌 **NET Console** – renamed from TLS Console; TLS option removed from settings
+- **fix:** ⚡ **Echo-timeout warning** – cleared correctly when relay echo arrives from sibling node
+- **fix:** 🖥️ **Telnet line buffer wrap** – console lines processed correctly when the line buffer wraps around
 
  ### v1.12.2
 - **feat:** 🔍 **QRZ first name always visible** – displayed directly next to the callsign without hover

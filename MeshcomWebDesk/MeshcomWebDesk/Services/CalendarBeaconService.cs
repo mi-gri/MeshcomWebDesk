@@ -50,7 +50,7 @@ public sealed class CalendarBeaconService : BackgroundService
             }
             catch (OperationCanceledException) { break; }
 
-            await CheckAndSendAsync();
+            await CheckAndSendAsync(stoppingToken);
         }
     }
 
@@ -58,13 +58,15 @@ public sealed class CalendarBeaconService : BackgroundService
     /// Calculates and fires any pending announcements for the current minute.
     /// Called once per minute from the loop.
     /// </summary>
-    private async Task CheckAndSendAsync()
+    private async Task CheckAndSendAsync(CancellationToken stoppingToken)
     {
         var settings = _optionsMonitor.CurrentValue;
         var entries  = settings.CalendarBeacons;
         if (entries.Count == 0) return;
 
-        var now = DateTime.Now;
+        var now      = DateTime.Now;
+        var cooldown = TimeSpan.FromSeconds(Math.Max(0, settings.TxCooldownSeconds));
+        bool lastSent = false;
 
         foreach (var entry in entries)
         {
@@ -73,23 +75,29 @@ public sealed class CalendarBeaconService : BackgroundService
 
             try
             {
-                await ProcessEntryAsync(entry, now);
+                if (lastSent && cooldown > TimeSpan.Zero)
+                    await Task.Delay(cooldown, stoppingToken);
+
+                lastSent = await ProcessEntryAsync(entry, now);
             }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "CalendarBeacon: Fehler bei Eintrag \"{Title}\" ({Id})", entry.Title, entry.Id);
+                lastSent = false;
             }
         }
     }
 
-    private async Task ProcessEntryAsync(CalendarBeaconEntry entry, DateTime now)
+    private async Task<bool> ProcessEntryAsync(CalendarBeaconEntry entry, DateTime now)
     {
         var today    = DateOnly.FromDateTime(now);
         var nextDate = GetNextOccurrence(entry, today);
 
-        if (nextDate == DateOnly.MaxValue) return;
+        if (nextDate == DateOnly.MaxValue) return false;
 
         var eventDt = nextDate.ToDateTime(entry.EventTimeParsed);
+        bool sent   = false;
 
         // ── Ankündigung: X Tage vorher ────────────────────────────────────
         if (entry.AnnounceLeadDays > 0)
@@ -100,6 +108,7 @@ public sealed class CalendarBeaconService : BackgroundService
             {
                 var daysUntil = (int)Math.Round((eventDt - now).TotalDays);
                 await SendAsync(entry, nextDate, now, daysUntil);
+                sent = true;
             }
         }
 
@@ -112,6 +121,7 @@ public sealed class CalendarBeaconService : BackgroundService
             {
                 var hoursUntil = (int)Math.Round((eventDt - now).TotalHours);
                 await SendAsync(entry, nextDate, now, hoursUntil: hoursUntil);
+                sent = true;
             }
         }
 
@@ -122,8 +132,11 @@ public sealed class CalendarBeaconService : BackgroundService
             if (IsCurrentMinute(eventDt, now) && _sentSlots.Add(slotKey))
             {
                 await SendAsync(entry, nextDate, now, daysUntil: 0, hoursUntil: 0);
+                sent = true;
             }
         }
+
+        return sent;
     }
 
     /// <summary>Returns true when <paramref name="target"/> falls within the current minute window.</summary>

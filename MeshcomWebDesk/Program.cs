@@ -63,6 +63,35 @@ if (args.Contains("--version"))
     return;
 }
 
+static void TryCreateDirectory(string path, string label)
+{
+    try
+    {
+        Directory.CreateDirectory(path);
+    }
+    catch (UnauthorizedAccessException ex)
+    {
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.Error.WriteLine($"""
+
+  [FATAL] Cannot create directory for '{label}': {path}
+          Access denied – the current user has no write permission for this path.
+
+          Possible causes:
+            • The path is a Linux/Docker-style path (e.g. /app) used on Windows.
+              Fix: set  DataPath=./data  and  LogPath=./logs  in appsettings.json.
+            • Docker: the container runs as a non-root user and /app is not writable.
+              Fix: mount a writable volume, e.g.  -v ./data:/app/data
+            • Direct install: the app directory is not writable by the service account.
+              Fix: grant write permission on '{path}' to the service account.
+
+          Original error: {ex.Message}
+  """);
+        Console.ResetColor();
+        Environment.Exit(1);
+    }
+}
+
 var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseWindowsService(options => options.ServiceName = "MeshcomWebDesk");
 
@@ -99,11 +128,11 @@ var retainDays = meshcomSection.GetValue<int?>("LogRetainDays") ?? 30;
 // This file is created by SettingsService when the user saves settings via the UI.
 // It is layered on top of appsettings.json so a Docker read-only mount still works.
 var dataPath = meshcomSection.GetValue<string>("DataPath") ?? @"C:\Temp\MeshcomData";
-Directory.CreateDirectory(dataPath);
+TryCreateDirectory(dataPath, "DataPath");
 var overrideFile = Path.Combine(dataPath, "appsettings.override.json");
 builder.Configuration.AddJsonFile(overrideFile, optional: true, reloadOnChange: true);
 
-Directory.CreateDirectory(logPath);
+TryCreateDirectory(logPath, "LogPath");
 
 var logFile = Path.Combine(logPath, "MeshcomWebDesk-.log");
 
@@ -139,7 +168,7 @@ builder.Services.AddSingleton<IPostConfigureOptions<MeshcomSettings>,
 // Docker: override via DATAPROTECTION_KEYPATH env variable (e.g. /app/keys).
 // Direct start: stored in dataPath/keys next to the other application data.
 var keyPath = Environment.GetEnvironmentVariable("DATAPROTECTION_KEYPATH") ?? Path.Combine(dataPath, "keys");
-Directory.CreateDirectory(keyPath);
+TryCreateDirectory(keyPath, "DATAPROTECTION_KEYPATH / keys");
 builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new System.IO.DirectoryInfo(keyPath));
 

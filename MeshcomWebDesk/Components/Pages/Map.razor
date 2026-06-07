@@ -595,7 +595,7 @@
                 callsign, myCallsign, sb.ToString(), mhList);
 
             var html = result is not null
-                ? System.Net.WebUtility.HtmlEncode(result).Replace("\n", "<br>")
+                ? System.Net.WebUtility.HtmlEncode(result.Value.Answer).Replace("\n", "<br>")
                 : "<span style='color:#f85149'>KI nicht verfügbar (API-Key prüfen)</span>";
 
             await JS.InvokeVoidAsync("meshcomMap.updatePopupAiContent", callsign, html);

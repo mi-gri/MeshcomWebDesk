@@ -476,24 +476,37 @@ public class ChatService
     /// Assigns the node sequence number (from the echo packet) to the most recent
     /// outgoing message sent to <paramref name="destination"/> that has no sequence yet.
     /// </summary>
-    public void AssignOutgoingSequence(string destination, string sequenceNumber) =>
+    public void AssignOutgoingSequence(string destination, string? sequenceNumber) =>
         AssignOutgoingSequence(destination, sequenceNumber, null);
 
-    public void AssignOutgoingSequence(string destination, string sequenceNumber, Guid? nodeId)
+    public void AssignOutgoingSequence(string destination, string? sequenceNumber, Guid? nodeId)
     {
-        var messages = ResolveState(nodeId).Messages;
-        lock (_lock)
+        bool Found(IEnumerable<MeshcomMessage> messages)
         {
-            var msg = messages.LastOrDefault(m =>
-                m.IsOutgoing &&
-                (m.SequenceNumber == null || m.SequenceNumber == "TX") &&
-                string.Equals(m.To.TrimStart('#'), destination.TrimStart('#'), StringComparison.OrdinalIgnoreCase));
-            if (msg != null)
+            lock (_lock)
             {
-                msg.SequenceNumber   = sequenceNumber;
-                msg.NodeEchoReceived = true;   // Node hat UDP-Paket empfangen und verarbeitet
+                var msg = messages.LastOrDefault(m =>
+                    m.IsOutgoing &&
+                    (m.SequenceNumber == null || m.SequenceNumber == "TX") &&
+                    string.Equals(m.To.TrimStart('#'), destination.TrimStart('#'), StringComparison.OrdinalIgnoreCase));
+                if (msg == null) return false;
+                // Group echoes have no {NNN} – preserve existing sequence number rather than overwriting with null
+                if (sequenceNumber != null)
+                    msg.SequenceNumber = sequenceNumber;
+                msg.NodeEchoReceived = true;
+                return true;
             }
         }
+
+        // Search the node whose echo arrived first, then fall back to all other nodes.
+        // A relay echo (src_type:"lora", src=myCallsign) may arrive from a sibling node's
+        // IP, so its nodeId key differs from the state bucket that holds the outgoing message.
+        if (!Found(ResolveState(nodeId).Messages))
+        {
+            foreach (var state in _nodeState.Values)
+                if (Found(state.Messages)) break;
+        }
+
         NotifyChange();
     }
 
@@ -533,6 +546,8 @@ public class ChatService
                 {
                     msg.SequenceNumber  = sequenceNumber;
                     msg.IsAcknowledged  = true;
+                    // An ACK proves the node received and transmitted the message – clear warning triangle.
+                    msg.NodeEchoReceived = true;
                     // Accumulate delivery flags – never clear a flag that was already set.
                     if (isGateway)  msg.IsGatewayDelivered = true;
                     else            msg.IsLoraDelivered    = true;

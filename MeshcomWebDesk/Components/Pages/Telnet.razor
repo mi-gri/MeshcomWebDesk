@@ -93,6 +93,16 @@
                     title="@Loc.T("LoRa-Debug-Hervorhebung ein/aus", "LoRa debug highlighting on/off")">
                 📻 <span class="btn-label">@Loc.T("LoRa", "LoRa")</span>
             </button>
+            <button class="btn-action btn-sm" @onclick="ShowMhAsync"
+                    disabled="@(!Console.IsConnected)"
+                    title="@Loc.T("MHeard-Liste anzeigen", "Show MHeard list")">
+                📋 <span class="btn-label">MH</span>
+            </button>
+            <button class="btn-action btn-sm" @onclick="ShowHelpAsync"
+                    disabled="@(!Console.IsConnected)"
+                    title="@Loc.T("Hilfe anzeigen (--help)", "Show help (--help)")">
+                ❓ <span class="btn-label">Help</span>
+            </button>
             <a class="btn-action btn-sm" href="/console-commands" title="@Loc.T("Befehl-Helper öffnen", "Open command helper")">
                 🎛️ <span class="btn-label">@Loc.T("Befehle", "Commands")</span>
             </a>
@@ -150,6 +160,88 @@
                 <button class="btn-secondary btn-sm" @onclick="() => _unknownCertThumbprint = null">
                     ✖ @Loc.T("Abbrechen", "Cancel")
                 </button>
+            </div>
+        </div>
+    }
+
+    @* ── MHeard Popup ── *@
+    @if (_showMh)
+    {
+        <div class="ota-overlay" @onclick="() => _showMh = false">
+            <div class="mh-panel" @onclick:stopPropagation>
+                <div class="mh-header">
+                    <span>📋 MHeard</span>
+                    <button class="cch-console-close" @onclick="() => _showMh = false">✕</button>
+                </div>
+                @if (_mhEntries.Count == 0)
+                {
+                    <div class="mh-empty">@Loc.T("Warte auf Daten…", "Waiting for data…")</div>
+                }
+                else
+                {
+                    <div class="mh-table-wrap">
+                        <table class="mh-table">
+                            <thead>
+                                <tr>
+                                    <th>Call</th>
+                                    <th>@Loc.T("Datum", "Date")</th>
+                                    <th>@Loc.T("Zeit", "Time")</th>
+                                    <th>Typ</th>
+                                    <th>Hardware</th>
+                                    <th>Mod</th>
+                                    <th>RSSI</th>
+                                    <th>SNR</th>
+                                    <th>Dist</th>
+                                    <th>PL</th>
+                                    <th>M</th>
+                                    <th>NC</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var e in _mhEntries)
+                                {
+                                    <tr>
+                                        <td class="mh-call">@e.Call</td>
+                                        <td>@e.Date</td>
+                                        <td>@e.Time</td>
+                                        <td><span class="mh-typ mh-typ-@e.Typ.ToLowerInvariant()">@e.Typ</span></td>
+                                        <td class="mh-hw">@e.Hardware</td>
+                                        <td>@e.Mod</td>
+                                        <td class="@RssiClass(e.Rssi)">@e.Rssi</td>
+                                        <td>@e.Snr</td>
+                                        <td>@e.Dist</td>
+                                        <td>@e.Pl</td>
+                                        <td>@e.M</td>
+                                        <td>@e.Nc</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    @* ── Help Popup ── *@
+    @if (_showHelp)
+    {
+        <div class="ota-overlay" @onclick="() => _showHelp = false">
+            <div class="cch-console-panel cch-help-panel" @onclick:stopPropagation>
+                <div class="cch-console-header">
+                    <span>❓ --help</span>
+                    <button class="cch-console-close" @onclick="() => _showHelp = false">✕</button>
+                </div>
+                <div class="cch-console-lines">
+                    @if (_helpDisplayLines.Count == 0)
+                    {
+                        <div class="cch-console-line cch-help-waiting">@Loc.T("Warte auf Antwort…", "Waiting for response…")</div>
+                    }
+                    @foreach (var line in _helpDisplayLines)
+                    {
+                        <div class="cch-console-line">@line</div>
+                    }
+                </div>
             </div>
         </div>
     }
@@ -214,6 +306,17 @@
 
     // Selected node for TLS console (independent from chat node selection)
     private Guid _consoleNodeId = Guid.Empty;
+
+    // ── MHeard Popup ──────────────────────────────────────────────────────
+    private bool _showMh;
+    private int _mhFromLine;
+    private List<MhEntry> _mhEntries = [];
+    private bool _mhComplete;
+
+    // ── Help Popup ────────────────────────────────────────────────────────
+    private bool _showHelp;
+    private int _helpFromLine;
+    private List<string> _helpDisplayLines = [];
 
     // Fingerprint of an unknown (first-connect) certificate, shown as a trust banner
     private string? _unknownCertThumbprint;
@@ -303,6 +406,19 @@
         if (string.IsNullOrEmpty(text)) return;
 
         _inputText = string.Empty;
+
+        if (text.Equals("--mh", StringComparison.OrdinalIgnoreCase) ||
+            text.Equals("--mheard", StringComparison.OrdinalIgnoreCase))
+        {
+            await ShowMhAsync();
+            return;
+        }
+        if (text.Equals("--help", StringComparison.OrdinalIgnoreCase))
+        {
+            await ShowHelpAsync();
+            return;
+        }
+
         await Console.SendLineAsync(text);
         await ScrollToBottomAsync();
     }
@@ -424,6 +540,32 @@
 
         // ── Spektrum-Parser entfernt – Anzeige nur im Console Command Helper ──
 
+        if ((_showMh && !_mhComplete) || _showHelp)
+        {
+            List<string> snap;
+            lock (Console.Lines)
+                snap = [.. Console.Lines];
+            if (_showMh && !_mhComplete)
+            {
+                var entries = MhParser.Parse(snap, _mhFromLine);
+                if (entries.Count > 0)
+                {
+                    _mhEntries = entries;
+                    _mhComplete = snap.Skip(_mhFromLine).Any(l => l.TrimStart().StartsWith("\\"));
+                }
+            }
+            if (_showHelp)
+            {
+                var filtered = snap.Skip(_helpFromLine)
+                    .Where(l => string.IsNullOrWhiteSpace(l)
+                             || l.TrimStart().StartsWith("--")
+                             || l.Contains("commands", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+                if (filtered.Count > 0)
+                    _helpDisplayLines = filtered;
+            }
+        }
+
         if (_paused) return;
         InvokeAsync(async () => { StateHasChanged(); await ScrollToBottomAsync(); });
     }
@@ -446,6 +588,29 @@
         try { await JS.InvokeVoidAsync("scrollElementToBottom", "telnet-output"); }
         catch { /* JS not ready */ }
     }
+
+    // ── MHeard ────────────────────────────────────────────────────────────
+
+    private async Task ShowMhAsync()
+    {
+        lock (Console.Lines)
+            _mhFromLine = Console.Lines.Count;
+        _mhEntries = [];
+        _mhComplete = false;
+        _showMh = true;
+        await Console.SendLineAsync("--mheard");
+    }
+
+    private async Task ShowHelpAsync()
+    {
+        lock (Console.Lines)
+            _helpFromLine = Console.Lines.Count;
+        _helpDisplayLines = [];
+        _showHelp = true;
+        await Console.SendLineAsync("--help");
+    }
+
+    private static string RssiClass(string rssiStr) => MhParser.RssiClass(rssiStr);
 
     private record LineInfo(string Css, string Html, string Hint);
 
