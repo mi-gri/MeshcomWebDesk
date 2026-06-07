@@ -794,6 +794,31 @@ public sealed class QsoSummaryService
                 .OrderBy(m => m.Timestamp)
                 .ToList();
 
+            // Trim oldest messages so the estimated prompt stays below the auto-model
+            // threshold for gpt-4.1 (>60 k tokens). Keeps us in gpt-4.1-mini territory
+            // which has significantly higher TPM limits on lower API tiers.
+            const int SearchTokenTarget = 55_000;
+            const int CharsPerToken = 4;
+            var approxMsgChars = messages.Sum(m => (m.Text?.Length ?? 0) + 60); // 60 = timestamp+callsigns overhead per line
+            if (approxMsgChars / CharsPerToken > SearchTokenTarget)
+            {
+                var budget = SearchTokenTarget * CharsPerToken;
+                var trimmed = new List<RawMessage>(messages.Count);
+                int used = 0;
+                foreach (var m in messages.AsEnumerable().Reverse()) // keep newest
+                {
+                    var size = (m.Text?.Length ?? 0) + 60;
+                    if (used + size > budget) break;
+                    trimmed.Add(m);
+                    used += size;
+                }
+                trimmed.Reverse();
+                _logger.LogInformation(
+                    "QsoSummaryService: SearchAsync – trimmed {Before} → {After} messages to stay under {Target} k tokens",
+                    messages.Count, trimmed.Count, SearchTokenTarget / 1000);
+                messages = trimmed;
+            }
+
             _logger.LogInformation(
                 "QsoSummaryService: SearchAsync({Mode}) – {Count} messages loaded (cap={Cap}), query='{Query}'",
                 allDirectContacts ? "ALL" : callsignBase, messages.Count, SearchSafetyCap, query);
