@@ -8,6 +8,7 @@
 - **AI Search**: Date inputs replaced with a reusable DatePicker component.
 - **Console Command Helper**: MH list and help popup added.
 - **NET Console**: Renamed from TLS Console; TLS option removed from settings.
+- **Hardware IDs 54–57**: HELTEC-T114, T3-S3-V1.3, T-CONNECT-PRO, HELTEC-WPAPER added to MeshcomLookup.
 
 ### Bugfixes
 - Echo-timeout warning cleared correctly on sibling-node relay echo.

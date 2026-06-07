@@ -19,7 +19,7 @@ A **Blazor Server** web application for communicating with a [MeshCom 4.0](https
 Built with **.NET 10** and **Blazor Interactive Server**.
 
 > **MeshCom Firmware:** Compatible with [icssw-org/MeshCom-Firmware](https://github.com/icssw-org/MeshCom-Firmware) v4.35+  
-> Hardware IDs 1–53 supported (`TLORA`, `T-BEAM`, `T-ECHO`, `T-DECK`, `T-DECK-PLUS`, `T-DECK-PRO`, `T-ETH-ELITE`, `HELTEC-V1`–`V4`, `RAK4631`, `EBYTE-E22`, `T5-EPAPER`, …)
+> Hardware IDs 1–57 supported (`TLORA`, `T-BEAM`, `T-ECHO`, `T-DECK`, `T-DECK-PLUS`, `T-DECK-PRO`, `T-ETH-ELITE`, `HELTEC-V1`–`V4`, `HELTEC-T114`, `HELTEC-WPAPER`, `RAK4631`, `EBYTE-E22`, `T5-EPAPER`, `T3-S3`, `T-CONNECT-PRO`, …)
 
 > 💾 **Ready-to-run binaries** (Windows & Linux) – no build required:  
 > 👉 [**Download latest release**](https://github.com/DH1FR/MeshcomWebDesk/releases/latest)
@@ -914,6 +914,12 @@ This client communicates with the MeshCom node using the **EXTUDP JSON protocol*
 | 50 | T-DECK-PRO | LilyGO T-Deck Pro |
 | 51 | T-BEAM-1W | LilyGO T-Beam 1W |
 | 52 | HELTEC-V4 | Heltec WiFi LoRa 32 v4 |
+| 40 | T5-EPAPER | LilyGO T5 E-Paper |
+| 53 | T-ETH-ELITE | LilyGO T-ETH Elite S3 |
+| 54 | HELTEC-T114 | Heltec T114 |
+| 55 | T3-S3-V1.3 | LilyGO T3-S3 v1.3 |
+| 56 | T-CONNECT-PRO | LilyGO T-Connect Pro |
+| 57 | HELTEC-WPAPER | Heltec Wireless Paper |
 
 > **Note:** Altitude in position packets follows APRS convention (feet). The client converts to metres automatically.
 
@@ -1462,6 +1468,16 @@ This data is inherently public (LoRa radio is receivable by anyone), but may con
 ---
 
  ## 📋 Changelog
+
+ ### v1.12.3 *(in development)*
+- **feat:** 🔍 **AI Search: smarter token management** – messages trimmed by token estimate to avoid rate-limit errors; warning shown when older messages are excluded; "Search in previous period" button to continue the search further back
+- **feat:** 🔍 **AI Search: noise filter** – bot commands and JSON system messages excluded from AI search and summary context
+- **feat:** 📅 **DatePicker component** – reusable date picker used in AI search date fields
+- **feat:** 🖥️ **Console Command Helper: MH list & help popup** – quick access to MH list and help directly from the console view
+- **feat:** 🔧 **New hardware IDs 54–57** – HELTEC-T114, T3-S3-V1.3, T-CONNECT-PRO, HELTEC-WPAPER
+- **fix:** 🔌 **NET Console** – renamed from TLS Console; TLS option removed from settings
+- **fix:** ⚡ **Echo-timeout warning** – cleared correctly when relay echo arrives from sibling node
+- **fix:** 🖥️ **Telnet line buffer wrap** – console lines processed correctly when the line buffer wraps around
 
  ### v1.12.2
 - **feat:** 🔍 **QRZ first name always visible** – displayed directly next to the callsign without hover
