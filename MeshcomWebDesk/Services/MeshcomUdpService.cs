@@ -431,6 +431,15 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
             var reply = await _botCommandService.ExecuteAsync(message.Text!, message.From, message);
             reply = await ExpandVariablesAsync(reply, message.From, before: message.Timestamp);
 
+            if (string.IsNullOrWhiteSpace(reply))
+            {
+                _logger.LogWarning(
+                    "Bot: reply is empty after variable expansion for '{Cmd}' from {From}. " +
+                    "If using {{telemetry}}, verify TelemetryFilePath is set and writable.",
+                    message.Text, message.From);
+                reply = _settings.Language == "en" ? "(no data)" : "(keine Daten)";
+            }
+
             var parts = SplitMessage(reply);
             _logger.LogInformation("Bot reply to {From} via node {NodeId} ({Parts} part(s)): {Preview}",
                 message.From, message.NodeId, parts.Count, reply.Length > 80 ? reply[..80] + "…" : reply);
@@ -807,11 +816,11 @@ public partial class MeshcomUdpService : BackgroundService, IMeshcomSender, IMes
     {
         ownTemp = null; ownHumidity = null; ownPressure = null;
 
-        if (!File.Exists(s.TelemetryFilePath))
-            return null;
-
         try
         {
+            if (string.IsNullOrWhiteSpace(s.TelemetryFilePath) || !File.Exists(s.TelemetryFilePath))
+                return null;
+
             var fileContent = File.ReadAllText(s.TelemetryFilePath);
             using var doc = JsonDocument.Parse(fileContent);
             var root  = doc.RootElement;
