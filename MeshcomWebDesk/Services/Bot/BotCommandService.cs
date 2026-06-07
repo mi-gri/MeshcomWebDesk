@@ -43,7 +43,7 @@ public class BotCommandService
 
     private static bool IsHyphenCommand(string text) =>
         text.Length > 2 &&
-        text.StartsWith("--", StringComparison.Ordinal) &&
+        text.StartsWith("!", StringComparison.Ordinal) &&
         char.IsLetter(text[2]);
 
     private static bool IsEmDashCommand(string text) =>
@@ -69,11 +69,11 @@ public class BotCommandService
     {
         // Normalize bare "ping" (case-insensitive) to "--ping" so it is dispatched like any other command
         if (text.Trim().Equals("ping", StringComparison.OrdinalIgnoreCase))
-            text = "--ping";
+            text = "!ping";
 
         // Strip the leading "--" or "—" (em dash U+2014, sent by some MeshCom clients / mobile keyboards)
         string body;
-        if (text.StartsWith("--", StringComparison.Ordinal))
+        if (text.StartsWith("!", StringComparison.Ordinal))
             body = text.Length > 2 ? text[2..] : string.Empty;
         else if (text.Length > 0 && text[0] == '\u2014')
             body = text.Length > 1 ? text[1..] : string.Empty;
@@ -91,15 +91,15 @@ public class BotCommandService
             c => string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase));
 
         return cmd is null
-            ? $"{_lang.T("Unbekannter Befehl", "Unknown command")}: --{name}. {_lang.T("Mit --help erhältst Du alle Befehle.", "Use --help to see all commands.")}"
+            ? $"{_lang.T("Unbekannter Befehl", "Unknown command")}: !{name}. {_lang.T("Mit !help erhältst Du alle Befehle.", "Use !help to see all commands.")}"
             : await cmd.ExecuteAsync(args, senderCallsign, context);
     }
 
     private string BuildHelp()
     {
-        var sb = new StringBuilder($"{_lang.T("Befehle", "Commands")}: --help");
+        var sb = new StringBuilder($"{_lang.T("Befehle", "Commands")}: !help");
         foreach (var cmd in AllCommands)
-            sb.Append($", --{cmd.Name}");
+            sb.Append($", !{cmd.Name}");
         return sb.ToString();
     }
 }
